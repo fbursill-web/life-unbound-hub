@@ -314,7 +314,7 @@ export default function LifeUnboundPortal() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', fontFamily: 'sans-serif', color: '#475569', display: 'flex', flexDirection: 'column' }}>
-      <header style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #f1f5f9', padding: '12px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', sticky: 'top', zIndex: 40, boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)' }}>
+      <header style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #f1f5f9', padding: '12px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 40, boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <img src="/logo.png" alt="Life Unbound Support Logo" style={{ height: '40px', objectFit: 'contain' }} />
           <span style={{ fontWeight: 'bold', color: '#1e293b', fontSize: '16px', letterSpacing: '-0.025em' }}>Life Unbound Support</span>

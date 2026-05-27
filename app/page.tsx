@@ -3,13 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
-// Connect dynamically to your active live database cluster
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://wgtcvmyofcoikynyftwn.supabase.co';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_naqzF_7iH63JA-0G2pw8Cw_XY7waAin';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function LifeUnboundPortal() {
-  // Authentication & System Navigation States
   const [user, setUser] = useState<any>(null);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -17,33 +15,26 @@ export default function LifeUnboundPortal() {
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  // Core Sync Data Repositories
   const [profiles, setProfiles] = useState<any[]>([]);
   const [participants, setParticipants] = useState<any[]>([]);
   const [shifts, setShifts] = useState<any[]>([]);
   const [timesheetHistory, setTimesheetHistory] = useState<any[]>([]);
   const [availabilitySubmissions, setAvailabilitySubmissions] = useState<any[]>([]);
 
-  // Expander Accordion States
   const [expandedClient, setExpandedClient] = useState<string | null>(null);
-
-  // Advanced Dropdown Calendar Controls
   const [calendarScope, setCalendarScope] = useState('combined'); 
   const [selectedCalendarTargetId, setSelectedCalendarTargetId] = useState('');
   const [calendarView, setCalendarView] = useState('month'); 
 
-  // Fortnight Reference Pay Cycle Generation Engine (Starts Mon Jan 5, 2026)
   const [fortnights, setFortnights] = useState<any[]>([]);
   const [selectedFortnight, setSelectedFortnight] = useState('');
 
-  // Form Input Buffers: Onboard Support Worker
   const [workerName, setWorkerName] = useState('');
   const [workerEmail, setWorkerEmail] = useState('');
   const [workerPhone, setWorkerPhone] = useState('');
   const [workerNotes, setWorkerNotes] = useState('');
   const [generatedPassword, setGeneratedPassword] = useState('');
 
-  // Form Input Buffers: Onboard Participant
   const [partName, setPartName] = useState('');
   const [partNdis, setPartNdis] = useState('');
   const [partPhone, setPartPhone] = useState('');
@@ -51,7 +42,6 @@ export default function LifeUnboundPortal() {
   const [partEmergPhone, setPartEmergPhone] = useState('');
   const [partNotes, setPartNotes] = useState('');
 
-  // Form Input Buffers: Allocate Shift (Now integrated in Calendar tab!)
   const [shiftTitle, setShiftTitle] = useState('');
   const [shiftWorkerId, setShiftWorkerId] = useState('');
   const [shiftParticipantId, setShiftParticipantId] = useState('');
@@ -60,13 +50,11 @@ export default function LifeUnboundPortal() {
   const [shiftEnd, setShiftEnd] = useState('');
   const [shiftDirectives, setShiftDirectives] = useState('');
 
-  // Form Input Buffers: Multi-Day Stacked Fortnightly Timesheet
   const [timesheetRows, setTimesheetRows] = useState<any[]>([
     { date: '', start: '', end: '', client: '', kmWith: '0', kmWithout: '0', notes: '' }
   ]);
   const [tsNotesChecked, setTsNotesChecked] = useState(false);
 
-  // Form Input Buffers: Multi-Day Stacked Fortnightly Availability
   const [availFortnight, setAvailFortnight] = useState('');
   const [availDaysState, setAvailDaysState] = useState<any>({
     Monday: { mode: 'standard', start: '09:00', end: '17:00' },
@@ -137,16 +125,16 @@ export default function LifeUnboundPortal() {
         .single();
 
       if (error || !data) {
-        showToast('No user profile found matching that email configuration.', 'error');
+        showToast('No user profile found matching that email.', 'error');
       } else if (data.password_mock === loginPassword.trim()) {
         setUser(data);
-        showToast(`Authorization granted. Welcome back.`, 'success');
+        showToast(`Welcome back.`, 'success');
         setCurrentTab('dashboard');
       } else {
-        showToast('Invalid access password configuration.', 'error');
+        showToast('Invalid access password.', 'error');
       }
     } catch (err) {
-      showToast('Handshake rejected. Verify connection keys.', 'error');
+      showToast('Connection handshake rejected.', 'error');
     } finally {
       setLoading(false);
     }
@@ -175,7 +163,7 @@ export default function LifeUnboundPortal() {
       setWorkerNotes('');
       fetchCoreData();
     } catch (err: any) {
-      showToast(err.message || 'Could not insert support worker profile row.', 'error');
+      showToast(err.message || 'Could not insert support worker.', 'error');
     }
   };
 
@@ -202,7 +190,7 @@ export default function LifeUnboundPortal() {
       setPartNotes('');
       fetchCoreData();
     } catch (err: any) {
-      showToast(err.message || 'Error executing participant row addition.', 'error');
+      showToast(err.message || 'Error executing participant addition.', 'error');
     }
   };
 
@@ -223,7 +211,7 @@ export default function LifeUnboundPortal() {
         }
       ]);
       if (error) throw error;
-      showToast('Shift deployed and published to calendar view!', 'success');
+      showToast('Shift deployed to calendar view!', 'success');
       setShiftTitle('');
       setShiftDirectives('');
       setShiftDate('');
@@ -231,7 +219,7 @@ export default function LifeUnboundPortal() {
       setShiftEnd('');
       fetchCoreData();
     } catch (err: any) {
-      showToast(err.message || 'Database rejected shift allocation matrix structure.', 'error');
+      showToast(err.message || 'Database rejected shift allocation structure.', 'error');
     }
   };
 
@@ -242,7 +230,7 @@ export default function LifeUnboundPortal() {
         .update({ staff_id: user.id, status: 'scheduled' })
         .eq('id', id);
       if (error) throw error;
-      showToast('Shift assigned and locked cleanly onto your staff roster!', 'success');
+      showToast('Shift assigned cleanly onto your staff roster!', 'success');
       fetchCoreData();
     } catch (err) {
       showToast('Error binding authorization to shift item.', 'error');
@@ -285,7 +273,7 @@ export default function LifeUnboundPortal() {
     };
 
     setTimesheetHistory([masterLogBlock, ...timesheetHistory]);
-    showToast(`Fortnightly timesheet packet filed securely with management!`, 'success');
+    showToast(`Fortnightly timesheet packet filed securely!`, 'success');
     setTimesheetRows([{ date: '', start: '', end: '', client: '', kmWith: '0', kmWithout: '0', notes: '' }]);
     setTsNotesChecked(false);
   };
@@ -336,8 +324,7 @@ export default function LifeUnboundPortal() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col antialiased font-sans selection:bg-sky-500/30">
       
-      {/* Premium Navigation Header Banner */}
-      <header className="bg-slate-900 border-b border-slate-800/80 px-6 py-4 flex items-center justify-between sticky top-0 z-40 backdrop-blur shadow-2xl">
+      <header className="bg-slate-900 border-b border-slate-800/80 px-6 py-4 flex items-center justify-between sticky top-0 z-40 backdrop-blur shadow-xl">
         <div className="flex items-center space-x-4">
           <div className="w-12 h-12 relative flex items-center justify-center rounded-xl bg-slate-950 border border-slate-800 p-1 shadow-inner">
             <img 
@@ -370,10 +357,8 @@ export default function LifeUnboundPortal() {
         </div>
       </header>
 
-      {/* Main Split Layout Core Framework Box */}
       <div className="flex-1 flex flex-col lg:flex-row">
         
-        {/* Navigation Sidebar */}
         {user && (
           <aside className="w-full lg:w-64 bg-slate-900/40 lg:border-r border-slate-800/60 p-4 space-y-1.5 flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible items-center lg:items-stretch shadow-2xl">
             <button 
@@ -418,19 +403,18 @@ export default function LifeUnboundPortal() {
           </aside>
         )}
 
-        {/* Dynamic Display Viewport Panel Component wrapper */}
         <main className="flex-1 p-6 sm:p-8 overflow-y-auto w-full mx-auto max-w-7xl">
           
-          {/* TOAST SYSTEM RENDER BANNER OVERLAY */}
+          {/* TOAST NOTIFICATIONS */}
           {notification && (
-            <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 max-w-sm w-full px-4 animate-fadeIn">
+            <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 max-w-sm w-full px-4">
               <div className={`p-4 rounded-xl border text-xs font-bold shadow-2xl flex items-center space-x-2 bg-slate-900 ${notification.type === 'success' ? 'border-sky-500 text-sky-400' : 'border-rose-500 text-rose-400'}`}>
                 <span>⚡</span><span>{notification.message}</span>
               </div>
             </div>
           )}
 
-          {/* AUTHENTICATION ROUTING WALL GATE */}
+          {/* LOGIN SPLASH */}
           {!user && (
             <div className="max-w-md mx-auto my-12 bg-slate-900 border border-slate-800 shadow-2xl rounded-2xl p-8 space-y-6">
               <div className="text-center space-y-1">
@@ -459,11 +443,11 @@ export default function LifeUnboundPortal() {
             </div>
           )}
 
-          {/* APPLICATION MAIN WORKSPACE VIEWS COMPONENTS CHASSIS */}
+          {/* SYSTEM DASH INTERFACES */}
           {user && (
             <div className="space-y-6">
               
-              {/* PAGE 1: DASHBOARDS */}
+              {/* TAB 1: DASHBOARDS */}
               {currentTab === 'dashboard' && (
                 <div className="space-y-6">
                   <div className="border-b border-slate-800 pb-4">
@@ -567,7 +551,7 @@ export default function LifeUnboundPortal() {
                           <textarea 
                             value={workerNotes} onChange={(e) => setWorkerNotes(e.target.value)}
                             className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs text-slate-200 focus:outline-none focus:border-sky-500 h-16 resize-none"
-                            placeholder="Log onboarding tokens, orientation notes, or scheduling remarks viewable by management..."
+                            placeholder="Log onboarding tokens, orientation notes..."
                           />
                         </div>
                         <button type="submit" className="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs uppercase tracking-wider py-3 rounded-xl transition-all shadow-md">
@@ -577,11 +561,57 @@ export default function LifeUnboundPortal() {
 
                       {generatedPassword && (
                         <div className="p-4 bg-sky-500/5 border border-sky-500/20 rounded-xl space-y-1">
-                          <span className="block text-[9px] font-bold text-sky-400 uppercase tracking-widest">Profile Allocation Access Key:</span>
+                          <span className="block text-[9px] font-bold text-sky-400 uppercase tracking-widest">Access Key Created:</span>
                           <p className="text-xs font-mono font-bold text-slate-100 bg-slate-950 p-2 rounded border border-slate-850 mt-1 select-all">Password: {generatedPassword}</p>
-                          <p className="text-[10px] text-slate-500">Provide this temporary credential code to the staff member for their initial suite activation.</p>
                         </div>
                       )}
                     </div>
 
-                    <div className="bg-slate-900 border border-slate-800 rounded-2xl
+                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
+                      <h3 className="text-xs font-black tracking-widest text-sky-400 uppercase">Register Participant Account</h3>
+                      <form onSubmit={handleRegisterParticipant} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="sm:col-span-2">
+                          <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Participant Full Identity Name</label>
+                          <input 
+                            type="text" required value={partName} onChange={(e) => setPartName(e.target.value)}
+                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500"
+                            placeholder="Cameron Davies"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">NDIS Number ID Reference</label>
+                          <input 
+                            type="text" required value={partNdis} onChange={(e) => setPartNdis(e.target.value)}
+                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500"
+                            placeholder="430900111"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Primary Telephone Contact</label>
+                          <input 
+                            type="text" required value={partPhone} onChange={(e) => setPartPhone(e.target.value)}
+                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500"
+                            placeholder="0400 999 111"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Emergency Representative Name</label>
+                          <input 
+                            type="text" required value={partEmergName} onChange={(e) => setPartEmergName(e.target.value)}
+                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500"
+                            placeholder="Guardian / Family Liaison"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Emergency Liaison Phone</label>
+                          <input 
+                            type="text" required value={partEmergPhone} onChange={(e) => setPartEmergPhone(e.target.value)}
+                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500"
+                            placeholder="0400 555 444"
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Strategic Care Notes & Support Parameters</label>
+                          <textarea 
+                            value={partNotes} onChange={(e) => setPartNotes(e.target.value)}
+                            className="w-full bg-slate-950 border border-slate-800

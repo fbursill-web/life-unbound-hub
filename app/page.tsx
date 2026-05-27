@@ -8,6 +8,8 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publish
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function LifeUnboundPortal() {
+  // Portal Entry & Session States
+  const [portalType, setPortalType] = useState<null | 'staff' | 'admin'>(null);
   const [user, setUser] = useState<any>(null);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -15,20 +17,24 @@ export default function LifeUnboundPortal() {
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
+  // Sync Repositories
   const [profiles, setProfiles] = useState<any[]>([]);
   const [participants, setParticipants] = useState<any[]>([]);
   const [shifts, setShifts] = useState<any[]>([]);
   const [timesheetHistory, setTimesheetHistory] = useState<any[]>([]);
   const [availabilitySubmissions, setAvailabilitySubmissions] = useState<any[]>([]);
 
+  // UI Interactive States
   const [expandedClient, setExpandedClient] = useState<string | null>(null);
   const [calendarScope, setCalendarScope] = useState('combined'); 
   const [selectedCalendarTargetId, setSelectedCalendarTargetId] = useState('');
   const [calendarView, setCalendarView] = useState('month'); 
 
+  // Pay Cycle Engine (Starts Mon Jan 5, 2026)
   const [fortnights, setFortnights] = useState<any[]>([]);
   const [selectedFortnight, setSelectedFortnight] = useState('');
 
+  // Form Input Buffers
   const [workerName, setWorkerName] = useState('');
   const [workerEmail, setWorkerEmail] = useState('');
   const [workerPhone, setWorkerPhone] = useState('');
@@ -42,6 +48,8 @@ export default function LifeUnboundPortal() {
   const [partEmergPhone, setPartEmergPhone] = useState('');
   const [partNotes, setPartNotes] = useState('');
 
+  // Multi-Use Calendar Inputs
+  const [eventCategory, setEventCategory] = useState('shift'); // 'shift', 'event'
   const [shiftTitle, setShiftTitle] = useState('');
   const [shiftWorkerId, setShiftWorkerId] = useState('');
   const [shiftParticipantId, setShiftParticipantId] = useState('');
@@ -62,12 +70,9 @@ export default function LifeUnboundPortal() {
     Wednesday: { mode: 'standard', start: '09:00', end: '17:00' },
     Thursday: { mode: 'standard', start: '09:00', end: '17:00' },
     Friday: { mode: 'standard', start: '09:00', end: '17:00' },
-    Saturday: { mode: 'unavailable', start: '', end: '' },
-    Sunday: { mode: 'unavailable', start: '', end: '' },
+    Saturday: { mode: 'standard', start: '09:00', end: '17:00' },
+    Sunday: { mode: 'standard', start: '09:00', end: '17:00' },
   });
-
-  const workerColors = ['border-sky-500 bg-sky-500/10 text-sky-400', 'border-indigo-500 bg-indigo-500/10 text-indigo-400', 'border-teal-500 bg-teal-500/10 text-teal-400', 'border-fuchsia-500 bg-fuchsia-500/10 text-fuchsia-400'];
-  const clientColors = ['border-emerald-500 bg-emerald-500/10 text-emerald-400', 'border-amber-500 bg-amber-500/10 text-amber-400', 'border-cyan-500 bg-cyan-500/10 text-cyan-400', 'border-purple-500 bg-purple-500/10 text-purple-400'];
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setNotification({ message, type });
@@ -127,15 +132,20 @@ export default function LifeUnboundPortal() {
       if (error || !data) {
         showToast('No user profile found matching that email.', 'error');
       } else if (data.password_mock === loginPassword.trim()) {
+        if (portalType === 'admin' && data.role !== 'director') {
+          showToast('Access denied. This user does not have administrative rights.', 'error');
+          setLoading(false);
+          return;
+        }
         setUser(data);
-        showToast('Welcome back.', 'success');
+        showToast('Authentication successful.', 'success');
         setCurrentTab('dashboard');
       } else {
-        showToast('Invalid access password.', 'error');
+        showToast('Invalid access credentials.', 'error');
       }
     } catch (err) {
-      showToast('Connection handshake rejected.', 'error');
-    } finally {
+      showToast('Handshake rejected. Verify system keys.', 'error');
+    } final {
       setLoading(false);
     }
   };
@@ -156,7 +166,7 @@ export default function LifeUnboundPortal() {
       ]);
       if (error) throw error;
       setGeneratedPassword(securePasswordTemplate);
-      showToast(`Account for ${workerName} initialized safely!`, 'success');
+      showToast('Support worker account initialized safely.', 'success');
       setWorkerName('');
       setWorkerEmail('');
       setWorkerPhone('');
@@ -181,7 +191,7 @@ export default function LifeUnboundPortal() {
         }
       ]);
       if (error) throw error;
-      showToast(`Participant profile for ${partName} registered!`, 'success');
+      showToast('Participant registered successfully.', 'success');
       setPartName('');
       setPartNdis('');
       setPartPhone('');
@@ -199,19 +209,36 @@ export default function LifeUnboundPortal() {
     try {
       const startIso = `${shiftDate}T${shiftStart}:00`;
       const endIso = `${shiftDate}T${shiftEnd}:00`;
+      
+      let computedStaffId = null;
+      if (calendarScope === 'worker' && selectedCalendarTargetId) {
+        computedStaffId = selectedCalendarTargetId;
+      } else if (shiftWorkerId) {
+        computedStaffId = shiftWorkerId;
+      }
+
+      let computedParticipantId = null;
+      if (calendarScope === 'participant' && selectedCalendarTargetId) {
+        computedParticipantId = selectedCalendarTargetId;
+      } else if (shiftParticipantId) {
+        computedParticipantId = shiftParticipantId;
+      }
+
+      const titlePrefix = eventCategory === 'event' ? '[EVENT] ' : '';
+
       const { error } = await supabase.from('shifts').insert([
         {
-          title: shiftTitle.trim() || 'Standard Roster Care Block',
-          staff_id: shiftWorkerId ? shiftWorkerId : null,
-          participant_id: shiftParticipantId ? shiftParticipantId : null,
+          title: titlePrefix + (shiftTitle.trim() || 'Roster Item'),
+          staff_id: computedStaffId,
+          participant_id: computedParticipantId,
           start_time: startIso,
           end_time: endIso,
           manager_directives: shiftDirectives.trim(),
-          status: shiftWorkerId ? 'scheduled' : 'available'
+          status: computedStaffId ? 'scheduled' : 'available'
         }
       ]);
       if (error) throw error;
-      showToast('Shift deployed to calendar view!', 'success');
+      showToast('Calendar row item deployed successfully.', 'success');
       setShiftTitle('');
       setShiftDirectives('');
       setShiftDate('');
@@ -219,7 +246,7 @@ export default function LifeUnboundPortal() {
       setShiftEnd('');
       fetchCoreData();
     } catch (err: any) {
-      showToast(err.message || 'Database rejected shift allocation structure.', 'error');
+      showToast(err.message || 'Database rejected entry structure.', 'error');
     }
   };
 
@@ -230,10 +257,10 @@ export default function LifeUnboundPortal() {
         .update({ staff_id: user.id, status: 'scheduled' })
         .eq('id', id);
       if (error) throw error;
-      showToast('Shift assigned cleanly onto your staff roster!', 'success');
+      showToast('Shift assigned onto your staff roster.', 'success');
       fetchCoreData();
     } catch (err) {
-      showToast('Error binding authorization to shift item.', 'error');
+      showToast('Error binding assignment.', 'error');
     }
   };
 
@@ -265,6 +292,8 @@ export default function LifeUnboundPortal() {
 
     const masterLogBlock = {
       id: payloadId,
+      workerName: user.full_name,
+      workerEmail: user.email,
       fortnightId: selectedFortnight,
       fortnightLabel: fortnights.find(f => f.id === selectedFortnight)?.label || selectedFortnight,
       rowsCount: timesheetRows.length,
@@ -273,7 +302,7 @@ export default function LifeUnboundPortal() {
     };
 
     setTimesheetHistory([masterLogBlock, ...timesheetHistory]);
-    showToast('Fortnightly timesheet packet filed securely!', 'success');
+    showToast('Fortnightly timesheet package filed securely.', 'success');
     setTimesheetRows([{ date: '', start: '', end: '', client: '', kmWith: '0', kmWithout: '0', notes: '' }]);
     setTsNotesChecked(false);
   };
@@ -302,616 +331,670 @@ export default function LifeUnboundPortal() {
       matrix: { ...availDaysState },
       submittedAt: new Date().toLocaleDateString('en-AU')
     };
-    const newHistory = [submissionItem, ...availabilitySubmissions];
-    setAvailabilitySubmissions(newHistory);
-    await supabase.from('profiles').update({ notes: JSON.stringify(newHistory) }).eq('id', user.id);
-    showToast('Fortnightly availabilities synchronized successfully!', 'success');
-  };
-
-  const getWorkerIndexColor = (id: string) => {
-    const idx = profiles.filter(p => p.role === 'support_worker').findIndex(p => p.id === id);
-    return workerColors[idx % workerColors.length] || 'border-slate-700 bg-slate-900 text-slate-400';
-  };
-
-  const getClientIndexColor = (id: string) => {
-    const idx = participants.findIndex(p => p.id === id);
-    return clientColors[idx % clientColors.length] || 'border-slate-700 bg-slate-900 text-slate-400';
+    setAvailabilitySubmissions([submissionItem, ...availabilitySubmissions]);
+    showToast('Fortnightly availabilities synchronized successfully.', 'success');
   };
 
   const workerList = profiles.filter(p => p.role === 'support_worker');
-  const userAllocatedHoursSum = shifts.filter(s => s.staff_id === user.id).length * 8;
+  const userAllocatedHoursSum = shifts.filter(s => s.staff_id === user?.id).length * 8;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col antialiased font-sans selection:bg-sky-500/30">
+    <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col antialiased font-sans">
       
-      <header className="bg-slate-900 border-b border-slate-800/80 px-6 py-4 flex items-center justify-between sticky top-0 z-40 backdrop-blur shadow-xl">
+      {/* Clean Light Navigation Header */}
+      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center space-x-4">
-          <div className="w-12 h-12 relative flex items-center justify-center rounded-xl bg-slate-950 border border-slate-800 p-1 shadow-inner">
+          <div className="w-12 h-12 relative flex items-center justify-center rounded-lg border border-gray-200 p-1 bg-white">
             <img 
               src="/logo.png" 
               alt={"LU Logo"} 
-              className="max-h-full max-w-full object-contain rounded-lg"
+              className="max-h-full max-w-full object-contain rounded"
               onError={(e)=>{ (e.target as HTMLImageElement).src = 'https://wgtcvmyofcoikynyftwn.supabase.co/storage/v1/object/public/assets/logo-fallback.png'; }}
             />
           </div>
           <div>
-            <span className="font-black text-base tracking-tight block bg-gradient-to-r from-slate-100 to-slate-300 bg-clip-text text-transparent">LIFE UNBOUND SUPPORT</span>
-            <span className="text-[9px] text-sky-400 font-bold tracking-widest uppercase">Internal Operations Portal</span>
+            <span className="font-bold text-lg tracking-tight block text-blue-900">LIFE UNBOUND SUPPORT</span>
+            <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">Operations Control Panel</span>
           </div>
         </div>
         <div className="flex items-center space-x-4">
           {user && (
             <div className="text-right hidden sm:block">
-              <span className="block text-xs font-black text-slate-200 uppercase tracking-wide">{user.full_name}</span>
-              <span className="block text-[10px] font-mono text-slate-500">{user.email}</span>
+              <span className="block text-xs font-bold text-gray-800 uppercase">{user.full_name}</span>
+              <span className="block text-[10px] font-mono text-gray-400">{user.email}</span>
             </div>
           )}
           {user && (
             <button 
-              onClick={() => setUser(null)}
-              className="bg-slate-950 hover:bg-rose-950/20 hover:text-rose-400 border border-slate-800 hover:border-rose-900/50 text-[10px] font-black uppercase tracking-wider px-3 py-2 rounded-xl transition-all shadow-md active:scale-95"
+              onClick={() => { setUser(null); setPortalType(null); }}
+              className="bg-white hover:bg-gray-100 text-gray-700 font-bold text-xs uppercase px-3 py-2 rounded border border-gray-300 transition-all active:scale-95"
             >
-              Exit Suite
+              Sign Out
             </button>
           )}
         </div>
       </header>
 
-      <div className="flex-1 flex flex-col lg:flex-row">
+      {/* TOP NAVIGATION LINK SYSTEM (Replaced the sidebar layout!) */}
+      {user && (
+        <nav className="bg-white border-b border-gray-200 px-6 py-2 flex flex-wrap gap-2 shadow-sm">
+          <button 
+            onClick={() => setCurrentTab('dashboard')}
+            className={`px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all ${currentTab === 'dashboard' ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:bg-gray-100'}`}
+          >
+            Dashboards
+          </button>
+          {user.role === 'director' && (
+            <button 
+              onClick={() => setCurrentTab('director')}
+              className={`px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all ${currentTab === 'director' ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:bg-gray-100'}`}
+            >
+              Admin Centre
+            </button>
+          )}
+          <button 
+            onClick={() => setCurrentTab('rosters')}
+            className={`px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all ${currentTab === 'rosters' ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:bg-gray-100'}`}
+          >
+            Calendar
+          </button>
+          <button 
+            onClick={() => setCurrentTab('profiles')}
+            className={`px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all ${currentTab === 'profiles' ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:bg-gray-100'}`}
+          >
+            Participant Profiles
+          </button>
+          <div className="w-px bg-gray-200 h-6 my-auto mx-1" />
+          <button 
+            onClick={() => setCurrentTab('availability')}
+            className={`px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all ${currentTab === 'availability' ? 'bg-blue-600 text-white shadow' : 'text-gray-500 hover:bg-gray-100'}`}
+          >
+            Availabilities
+          </button>
+          <button 
+            onClick={() => setCurrentTab('timesheets')}
+            className={`px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all ${currentTab === 'timesheets' ? 'bg-blue-600 text-white shadow' : 'text-gray-500 hover:bg-gray-100'}`}
+          >
+            Timesheet Submissions
+          </button>
+        </nav>
+      )}
+
+      {/* Main App Canvas */}
+      <main className="flex-1 p-6 sm:p-8 w-full mx-auto max-w-7xl">
         
-        {user && (
-          <aside className="w-full lg:w-64 bg-slate-900/40 lg:border-r border-slate-800/60 p-4 space-y-1.5 flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible items-center lg:items-stretch shadow-2xl">
-            <button 
-              onClick={() => setCurrentTab('dashboard')}
-              className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border flex items-center space-x-3 whitespace-nowrap ${currentTab === 'dashboard' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30 shadow-lg shadow-sky-500/5' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200 border-transparent'}`}
-            >
-              📊 Dashboards
-            </button>
-            {user.role === 'director' && (
-              <button 
-                onClick={() => setCurrentTab('director')}
-                className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border flex items-center space-x-3 whitespace-nowrap ${currentTab === 'director' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30 shadow-lg shadow-sky-500/5' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200 border-transparent'}`}
-              >
-                👑 Admin Centre
-              </button>
-            )}
-            <button 
-              onClick={() => setCurrentTab('rosters')}
-              className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border flex items-center space-x-3 whitespace-nowrap ${currentTab === 'rosters' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30 shadow-lg shadow-sky-500/5' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200 border-transparent'}`}
-            >
-              📅 Calendar
-            </button>
-            <button 
-              onClick={() => setCurrentTab('profiles')}
-              className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border flex items-center space-x-3 whitespace-nowrap ${currentTab === 'profiles' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30 shadow-lg shadow-sky-500/5' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200 border-transparent'}`}
-            >
-              👥 Participant Profiles
-            </button>
-            <div className="h-px bg-slate-800/80 my-2 hidden lg:block" />
-            <button 
-              onClick={() => setCurrentTab('availability')}
-              className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border flex items-center space-x-3 whitespace-nowrap ${currentTab === 'availability' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30' : 'text-slate-500 hover:bg-slate-900 hover:text-slate-300 border-transparent'}`}
-            >
-              ⏱️ Availabilities
-            </button>
-            <button 
-              onClick={() => setCurrentTab('timesheets')}
-              className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border flex items-center space-x-3 whitespace-nowrap ${currentTab === 'timesheets' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30' : 'text-slate-500 hover:bg-slate-900 hover:text-slate-300 border-transparent'}`}
-            >
-              📝 Timesheet Submissions
-            </button>
-          </aside>
+        {/* Toast Notification Container */}
+        {notification && (
+          <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 max-w-sm w-full px-4">
+            <div className={`p-4 rounded border text-xs font-bold shadow-lg bg-white ${notification.type === 'success' ? 'border-blue-500 text-blue-600' : 'border-red-500 text-red-600'}`}>
+              {notification.message}
+            </div>
+          </div>
         )}
 
-        <main className="flex-1 p-6 sm:p-8 overflow-y-auto w-full mx-auto max-w-7xl">
-          
-          {notification && (
-            <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 max-w-sm w-full px-4">
-              <div className={`p-4 rounded-xl border text-xs font-bold shadow-2xl flex items-center space-x-2 bg-slate-900 ${notification.type === 'success' ? 'border-sky-500 text-sky-400' : 'border-rose-500 text-rose-400'}`}>
-                <span>⚡</span><span>{notification.message}</span>
-              </div>
+        {/* SPLIT ENTRY LOG-IN GATE SYSTEM (Item 1 & Design Cleanup) */}
+        {!user && !portalType && (
+          <div className="max-w-md mx-auto my-16 bg-white border border-gray-200 shadow-lg rounded-xl p-8 space-y-6 text-center">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400">Portal Entry Gateway</h2>
+            <p className="text-xs text-gray-500">Select your required application system module workspace level:</p>
+            <div className="grid grid-cols-1 gap-3 pt-2">
+              <button 
+                onClick={() => setPortalType('staff')}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider py-4 rounded-lg shadow transition-all transform active:scale-95"
+              >
+                Staff Portal
+              </button>
+              <button 
+                onClick={() => setPortalType('admin')}
+                className="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold text-xs uppercase tracking-wider py-4 rounded-lg shadow transition-all transform active:scale-95"
+              >
+                Admin Portal
+              </button>
             </div>
-          )}
+          </div>
+        )}
 
-          {!user && (
-            <div className="max-w-md mx-auto my-12 bg-slate-900 border border-slate-800 shadow-2xl rounded-2xl p-8 space-y-6">
-              <div className="text-center space-y-1">
-                <h2 className="text-xl font-black tracking-tight text-slate-100 uppercase">Authorize Portal Gateway</h2>
-                <p className="text-xs text-slate-400 font-medium">Life Unbound Operations Control System</p>
-              </div>
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div>
-                  <label className="block text-[9px] font-bold tracking-widest text-slate-400 uppercase mb-1">Corporate Email Address</label>
-                  <input 
-                    type="email" required placeholder="name@lifeunboundsupport.com.au" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-200 focus:outline-none focus:border-sky-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[9px] font-bold tracking-widest text-slate-400 uppercase mb-1">Access Security Password</label>
-                  <input 
-                    type="password" required placeholder="••••••••••••" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-200 focus:outline-none focus:border-sky-500"
-                  />
-                </div>
-                <button type="submit" disabled={loading} className="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs uppercase tracking-wider py-3.5 rounded-xl shadow-lg shadow-sky-500/10 transform active:scale-95 transition-all">
-                  Authorize Secure Access Session
-                </button>
-              </form>
+        {/* Dynamic Contextual Auth Input Panel */}
+        {!user && portalType && (
+          <div className="max-w-md mx-auto my-12 bg-white border border-gray-200 shadow-lg rounded-xl p-8 space-y-6">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <h2 className="text-sm font-bold uppercase text-gray-800 tracking-wider">
+                {portalType === 'admin' ? 'Admin Portal Secure Log In' : 'Staff Portal Secure Log In'}
+              </h2>
+              <button onClick={() => setPortalType(null)} className="text-xs text-gray-400 hover:text-gray-600 font-bold uppercase">Back</button>
             </div>
-          )}
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold tracking-wider text-gray-500 uppercase mb-1">Corporate Email Address</label>
+                <input 
+                  type="email" required placeholder="name@lifeunboundsupport.com.au" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-2.5 text-xs text-gray-900 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold tracking-wider text-gray-500 uppercase mb-1">Security Access Password</label>
+                <input 
+                  type="password" required placeholder="••••••••••••" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-2.5 text-xs text-gray-900 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider py-3 rounded-lg shadow transform active:scale-95 transition-all">
+                Verify Credentials
+              </button>
+            </form>
+          </div>
+        )}
 
-          {user && (
-            <div className="space-y-6">
-              
-              {currentTab === 'dashboard' && (
-                <div className="space-y-6">
-                  <div className="border-b border-slate-800 pb-4">
-                    <h2 className="text-lg font-black uppercase tracking-wide">Dashboards</h2>
-                    <p className="text-xs text-slate-400">Real-time summary tracking parameters across active support lines.</p>
-                  </div>
+        {/* ACTIVE DASHBOARD CONTAINER ROUTER */}
+        {user && (
+          <div className="space-y-6">
+            
+            {/* TAB 1: DASHBOARDS (Item 1 requested modifications) */}
+            {currentTab === 'dashboard' && (
+              <div className="space-y-6">
+                <div className="border-b border-gray-200 pb-4">
+                  <h2 className="text-base font-bold uppercase tracking-wider text-blue-900">Dashboards</h2>
+                  <p className="text-xs text-gray-500">Summary overview of current payload limits and operational parameters.</p>
+                </div>
 
-                  {user.role === 'support_worker' ? (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-xl relative overflow-hidden">
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-black tracking-widest text-sky-400 uppercase block">My Fortnight Hours</span>
-                          <h3 className="text-2xl font-black tracking-tight text-slate-100">{userAllocatedHoursSum} Hours</h3>
-                          <p className="text-xs text-slate-400">Total care provider hours scheduled and allocated for your current active fortnight cycle.</p>
-                        </div>
-                        <div className="w-full bg-slate-950 h-2 rounded-full mt-6 overflow-hidden border border-slate-850">
-                          <div className="bg-sky-400 h-full w-2/5 rounded-full" />
-                        </div>
-                      </div>
-                      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 md:col-span-2 space-y-3 shadow-xl">
-                        <h4 className="text-xs font-black tracking-wider text-slate-300 uppercase">My Next Shifts Mapped</h4>
-                        <div className="space-y-2">
-                          {shifts.filter(s => s.staff_id === user.id).slice(0, 2).map(s => {
-                            const clientObj = participants.find(p => p.id === s.participant_id);
-                            return (
-                              <div key={s.id} className="bg-slate-950 p-4 rounded-xl border border-slate-850 flex items-center justify-between">
-                                <div className="space-y-0.5">
-                                  <span className="font-bold text-xs text-slate-200 block uppercase tracking-wide">{s.title}</span>
-                                  <span className="text-[11px] font-mono text-slate-400 block">Date: {new Date(s.start_time).toLocaleDateString('en-AU')} | Client: {clientObj ? clientObj.name : 'Internal Admin'}</span>
-                                </div>
-                                <span className="text-[10px] bg-sky-500/10 border border-sky-500/20 text-sky-400 px-3 py-1 rounded-lg font-bold font-mono">
-                                  {new Date(s.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
-                          <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Active Workforce Panel</span>
-                          <span className="text-xl font-black text-slate-100 block tracking-tight">{profiles.length} Verified Users</span>
-                        </div>
-                        <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
-                          <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Registered Client Accounts</span>
-                          <span className="text-xl font-black text-slate-100 block tracking-tight">{participants.length} Active Records</span>
-                        </div>
-                        <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
-                          <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Unassigned Shifts Metric</span>
-                          <span className="text-xl font-black text-rose-400 block tracking-tight">{shifts.filter(s => s.status === 'available' || !s.staff_id).length} Red Alerts</span>
-                        </div>
+                {user.role === 'support_worker' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-white border border-gray-200 rounded-xl p-6 flex flex-col justify-between shadow-sm">
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold tracking-widest text-blue-600 uppercase block">My Fortnight Hours</span>
+                        <h3 className="text-xl font-bold text-gray-800">{userAllocatedHoursSum} Hours Assigned</h3>
+                        <p className="text-xs text-gray-400">Total care hours currently mapped to your active calendar profile for this period.</p>
                       </div>
                     </div>
-                  )}
-                </div>
-              )}
-
-              {currentTab === 'director' && user.role === 'director' && (
-                <div className="space-y-6">
-                  <div className="border-b border-slate-800 pb-4">
-                    <h2 className="text-lg font-black uppercase tracking-wide">Admin Centre</h2>
-                    <p className="text-xs text-slate-400">Onboard support staff, create client profiles, and coordinate framework metadata fields.</p>
-                  </div>
-
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
-                      <h3 className="text-xs font-black tracking-widest text-sky-400 uppercase">Register Support Worker</h3>
-                      <form onSubmit={handleRegisterWorker} className="space-y-3">
-                        <div>
-                          <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Full Legal Name</label>
-                          <input 
-                            type="text" required value={workerName} onChange={(e) => setWorkerName(e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500"
-                            placeholder="Mitchell Andrews"
-                          />
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Contact Email Address</label>
-                            <input 
-                              type="email" required value={workerEmail} onChange={(e) => setWorkerEmail(e.target.value)}
-                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500"
-                              placeholder="worker@lifeunboundsupport.com.au"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Contact Phone Number</label>
-                            <input 
-                              type="text" required value={workerPhone} onChange={(e) => setWorkerPhone(e.target.value)}
-                              className="w-full bg-slate-955 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500"
-                              placeholder="0412 345 678"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Internal Onboarding & Audit Notes</label>
-                          <textarea 
-                            value={workerNotes} onChange={(e) => setWorkerNotes(e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs text-slate-200 focus:outline-none focus:border-sky-500 h-16 resize-none"
-                            placeholder="Log onboarding tokens, orientation notes..."
-                          />
-                        </div>
-                        <button type="submit" className="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs uppercase tracking-wider py-3 rounded-xl transition-all shadow-md">
-                          Generate Profile row & Access Tokens
-                        </button>
-                      </form>
-
-                      {generatedPassword && (
-                        <div className="p-4 bg-sky-500/5 border border-sky-500/20 rounded-xl space-y-1">
-                          <span className="block text-[9px] font-bold text-sky-400 uppercase tracking-widest">Access Key Created:</span>
-                          <p className="text-xs font-mono font-bold text-slate-100 bg-slate-950 p-2 rounded border border-slate-850 mt-1 select-all">Password: {generatedPassword}</p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
-                      <h3 className="text-xs font-black tracking-widest text-sky-400 uppercase">Register Participant Account</h3>
-                      <form onSubmit={handleRegisterParticipant} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="sm:col-span-2">
-                          <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Participant Full Identity Name</label>
-                          <input 
-                            type="text" required value={partName} onChange={(e) => setPartName(e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500"
-                            placeholder="Cameron Davies"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">NDIS Number ID Reference</label>
-                          <input 
-                            type="text" required value={partNdis} onChange={(e) => setPartNdis(e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500"
-                            placeholder="430900111"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Primary Telephone Contact</label>
-                          <input 
-                            type="text" required value={partPhone} onChange={(e) => setPartPhone(e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500"
-                            placeholder="0400 999 111"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Emergency Representative Name</label>
-                          <input 
-                            type="text" required value={partEmergName} onChange={(e) => setPartEmergName(e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500"
-                            placeholder="Guardian / Family Liaison"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Emergency Liaison Phone</label>
-                          <input 
-                            type="text" required value={partEmergPhone} onChange={(e) => setPartEmergPhone(e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500"
-                            placeholder="0400 555 444"
-                          />
-                        </div>
-                        <div className="sm:col-span-2">
-                          <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Strategic Care Notes & Support Parameters</label>
-                          <textarea 
-                            value={partNotes} onChange={(e) => setPartNotes(e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs text-slate-200 focus:outline-none focus:border-sky-500 h-16 resize-none"
-                            placeholder="Detail triggers, goal structures, communication keys..."
-                          />
-                        </div>
-                        <button type="submit" className="sm:col-span-2 bg-slate-950 border border-slate-800 text-slate-300 hover:text-slate-100 hover:border-slate-700 font-bold text-xs uppercase tracking-wider py-2.5 rounded-xl transition-all transform active:scale-95">
-                          Commit Participant Card to Cloud Registry
-                        </button>
-                      </form>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {currentTab === 'rosters' && (
-                <div className="space-y-6">
-                  <div className="border-b border-slate-800 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div>
-                      <h2 className="text-lg font-black uppercase tracking-wide">Calendar</h2>
-                      <p className="text-xs text-slate-400">Isolate workflows via dropdown tracks, track unallocated slots highlighted in red, and deploy new shifts inline.</p>
-                    </div>
-                    <div className="bg-slate-900 border border-slate-800 p-1 rounded-xl flex space-x-1">
-                      {['day', 'week', 'month'].map(v => (
-                        <button 
-                          key={v} onClick={() => setCalendarView(v)}
-                          className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${calendarView === v ? 'bg-sky-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
-                        >
-                          {v}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 shadow-xl">
-                    <div>
-                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Calendar Category Dropdown</label>
-                      <select 
-                        value={calendarScope} 
-                        onChange={(e) => { setCalendarScope(e.target.value); setSelectedCalendarTargetId(''); }}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-sky-500"
-                      >
-                        <option value="combined">🌐 Combined Calendar (Full Matrix View)</option>
-                        <option value="admin">💼 Admin Calendar (Internal Operations)</option>
-                        <option value="worker">🧑‍💼 Staff Calendars (Isolate Employee)</option>
-                        <option value="participant">👥 Participant Calendars (Isolate Client)</option>
-                      </select>
-                    </div>
-
-                    {calendarScope === 'worker' && (
-                      <div>
-                        <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Select Employee Profile</label>
-                        <select 
-                          value={selectedCalendarTargetId} onChange={(e) => setSelectedCalendarTargetId(e.target.value)}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-sky-400 focus:outline-none focus:border-sky-500 font-bold"
-                        >
-                          <option value="">-- Choose Staff Member --</option>
-                          {workerList.map(w => (
-                            <option key={w.id} value={w.id}>{w.full_name}</option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-
-                    {calendarScope === 'participant' && (
-                      <div>
-                        <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Select Participant Profile</label>
-                        <select 
-                          value={selectedCalendarTargetId} onChange={(e) => setSelectedCalendarTargetId(e.target.value)}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-emerald-400 focus:outline-none focus:border-sky-500 font-bold"
-                        >
-                          <option value="">-- Choose Client Profile --</option>
-                          {participants.map(p => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-                  </div>
-
-                  {user.role === 'director' && (
-                    <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl space-y-3">
-                      <h4 className="text-xs font-black tracking-widest text-sky-400 uppercase">➕ Quick Allocate New Shift Inline</h4>
-                      <form onSubmit={handleCreateShift} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                        <input type="text" required placeholder="Activity Summary" value={shiftTitle} onChange={(e) => setShiftTitle(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs focus:border-sky-500 outline-none" />
-                        <select value={shiftWorkerId} onChange={(e) => setShiftWorkerId(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs focus:border-sky-500 outline-none">
-                          <option value="">Unclaimed Roster</option>
-                          {workerList.map(w => <option key={w.id} value={w.id}>{w.full_name}</option>)}
-                        </select>
-                        <select value={shiftParticipantId} onChange={(e) => setShiftParticipantId(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs focus:border-sky-500 outline-none">
-                          <option value="">Corporate Admin</option>
-                          {participants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                        </select>
-                        <input type="date" required value={shiftDate} onChange={(e) => setShiftDate(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs focus:border-sky-500 outline-none" />
-                        <input type="time" required value={shiftStart} onChange={(e) => setShiftStart(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs focus:border-sky-500 outline-none" />
-                        <input type="time" required value={shiftEnd} onChange={(e) => setShiftEnd(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs focus:border-sky-500 outline-none" />
-                        <div className="sm:col-span-2 md:col-span-3 lg:col-span-5">
-                          <input type="text" placeholder="Manager Shift Directive Reminders..." value={shiftDirectives} onChange={(e) => setShiftDirectives(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs focus:border-sky-500 outline-none" />
-                        </div>
-                        <button type="submit" className="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs uppercase rounded-xl tracking-wider py-2 transition-all shadow-md transform active:scale-95">Deploy</button>
-                      </form>
-                    </div>
-                  )}
-
-                  <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
-                    <div className="p-4 sm:p-6 space-y-3">
-                      {shifts
-                        .filter(s => {
-                          if (calendarScope === 'admin') return !s.participant_id;
-                          if (calendarScope === 'worker' && selectedCalendarTargetId) return s.staff_id === selectedCalendarTargetId;
-                          if (calendarScope === 'participant' && selectedCalendarTargetId) return s.participant_id === selectedCalendarTargetId;
-                          return true;
-                        })
-                        .map(s => {
-                          const isUnclaimed = !s.staff_id || s.status === 'available';
-                          const workerMapDetails = profiles.find(p => p.id === s.staff_id);
-                          const clientMapDetails = participants.find(p => p.id === s.participant_id);
-                          
-                          const colorThemeClass = isUnclaimed 
-                            ? 'border-rose-500 bg-rose-950/10 text-rose-400 shadow shadow-rose-950/20' 
-                            : s.participant_id 
-                              ? getClientIndexColor(s.participant_id) 
-                              : getWorkerIndexColor(s.staff_id);
-
-                          return (
-                            <div key={s.id} className={`border rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 transition-all ${colorThemeClass}`}>
-                              <div className="space-y-1">
-                                <div className="flex items-center space-x-2">
-                                  <span className={`w-2 h-2 rounded-full ${isUnclaimed ? 'bg-rose-500 animate-pulse' : 'bg-current'}`} />
-                                  <h4 className="font-bold text-sm uppercase tracking-wide text-slate-100">{s.title}</h4>
-                                  {isUnclaimed && <span className="text-[9px] font-black tracking-widest bg-rose-500 text-slate-950 px-2 py-0.5 rounded uppercase">Unassigned</span>}
-                                </div>
-                                <p className="text-[11px] opacity-90 font-mono">
-                                  📅 {new Date(s.start_time).toLocaleDateString('en-AU')} | ⏱️ {new Date(s.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {new Date(s.end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                </p>
-                                <div className="flex flex-wrap gap-2 text-[10px] pt-1">
-                                  <span>Staff: <strong>{workerMapDetails ? workerMapDetails.full_name : 'None Assigned'}</strong></span>
-                                  <span>Participant: <strong>{clientMapDetails ? clientMapDetails.name : 'Corporate Admin'}</strong></span>
-                                </div>
-                                {s.manager_directives && <p className="mt-2 bg-slate-950/40 p-2 rounded text-xs italic border-l border-slate-700 text-slate-300">💡 Instruction: {s.manager_directives}</p>}
-                              </div>
-                              {isUnclaimed && user.role === 'support_worker' && (
-                                <button onClick={() => handleClaimUnclaimedShift(s.id)} className="bg-rose-600 hover:bg-rose-500 text-slate-950 font-black text-xs uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all transform active:scale-95 shadow">Claim</button>
-                              )}
-                            </div>
-                          );
-                        })}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {currentTab === 'profiles' && (
-                <div className="space-y-6">
-                  <div className="border-b border-slate-800 pb-4">
-                    <h2 className="text-lg font-black uppercase tracking-wide">Participant Profiles</h2>
-                    <p className="text-xs text-slate-400">Review critical compliance dockets and behavior support frameworks.</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    {participants.map(p => {
-                      const isItemOpen = expandedClient === p.id;
-                      return (
-                        <div key={p.id} className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl transition-all">
-                          <div onClick={() => setExpandedClient(isItemOpen ? null : p.id)} className="p-5 flex items-center justify-between cursor-pointer hover:bg-slate-850/60 transition-all select-none">
-                            <div className="flex items-center space-x-3">
-                              <div className="w-2.5 h-2.5 rounded-full bg-sky-400" />
-                              <h3 className="font-black text-xs uppercase tracking-wider text-slate-200">{p.name}</h3>
-                            </div>
-                            <span className="text-sm font-bold text-sky-400">{isItemOpen ? '▲' : '▼'}</span>
-                          </div>
-
-                          {isItemOpen && (
-                            <div className="p-6 bg-slate-950/60 border-t border-slate-850 space-y-5">
-                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                <div className="bg-slate-950 p-4 rounded-xl border border-slate-850">
-                                  <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Primary Telephone Contact</span>
-                                  <p className="text-xs font-mono font-bold text-slate-200">{p.primary_contact_phone || 'Unlisted/Null'}</p>
-                                </div>
-                                <div className="bg-slate-950 p-4 rounded-xl border border-slate-850">
-                                  <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">NDIS Identity Key Code</span>
-                                  <p className="text-xs font-mono font-bold text-slate-200">{p.ndis_number || 'Unlisted/Null'}</p>
-                                </div>
-                                <div className="bg-slate-950 p-4 rounded-xl border border-slate-850">
-                                  <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Emergency Representative Liaison</span>
-                                  <p className="text-xs font-bold text-slate-200 uppercase">{p.emergency_contact_name || 'Not Logged'}</p>
-                                  <span className="text-[11px] font-mono text-sky-400">{p.emergency_contact_phone || ''}</span>
-                                </div>
-                              </div>
-                              <div className="bg-slate-950 p-4 rounded-xl border border-slate-850 space-y-1">
-                                <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Care Directives Summary notes</span>
-                                <p className="text-xs text-slate-300 font-medium leading-relaxed">{p.about_me_notes || 'No notes attached.'}</p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {currentTab === 'availability' && (
-                <div className="space-y-6">
-                  <div className="border-b border-slate-800 pb-4">
-                    <h2 className="text-lg font-black uppercase tracking-wide">Availabilities</h2>
-                    <p className="text-xs text-slate-400">Lock and update your complete fortnightly scheduling parameters all at once.</p>
-                  </div>
-                  <form onSubmit={handleStackedAvailabilitySubmit} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6 shadow-2xl">
-                    <div className="max-w-xs">
-                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Target Payroll Fortnight Cycle</label>
-                      <select value={availFortnight} onChange={(e) => setAvailFortnight(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-sky-400 font-bold outline-none">
-                        {fortnights.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-                      </select>
-                    </div>
-                    <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-950 divide-y divide-slate-850">
-                      {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => {
-                        const state = availDaysState[day];
-                        return (
-                          <div key={day} className="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-slate-900/40 hover:bg-slate-900/70 transition-all">
-                            <span className="text-xs font-black uppercase tracking-wider text-slate-300 w-28">{day}</span>
-                            <div className="flex flex-wrap gap-3 items-center">
-                              {['standard', 'allday', 'unavailable'].map(m => (
-                                <button key={m} type="button" onClick={() => updateAvailabilityMode(day, m as any)} className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-all ${state.mode === m ? 'bg-sky-500/10 border-sky-500 text-sky-400' : 'bg-slate-950 border-slate-800 text-slate-500'}`}>{m === 'standard' ? 'Specific Hours' : m === 'allday' ? 'All Day Available' : 'Unavailable'}</button>
-                              ))}
-                            </div>
-                            {state.mode === 'standard' && (
-                              <div className="flex items-center space-x-2">
-                                <input type="time" value={state.start} onChange={(e) => updateAvailabilityTimes(day, 'start', e.target.value)} className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-200 outline-none" />
-                                <span className="text-xs text-slate-500 font-mono">TO</span>
-                                <input type="time" value={state.end} onChange={(e) => updateAvailabilityTimes(day, 'end', e.target.value)} className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-200 outline-none" />
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <button type="submit" className="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs uppercase py-3.5 rounded-xl shadow-md transition-all transform active:scale-95">Submit Availabilities Block</button>
-                  </form>
-                </div>
-              )}
-
-              {currentTab === 'timesheets' && (
-                <div className="space-y-6">
-                  <div className="border-b border-slate-800 pb-4">
-                    <h2 className="text-lg font-black uppercase tracking-wide">Timesheet Submissions</h2>
-                    <p className="text-xs text-slate-400">File stacked hour structures at the end of your fortnight period for compliance remittance mapping.</p>
-                  </div>
-                  <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 xl:col-span-2 space-y-4 shadow-xl">
-                      <form onSubmit={handleStackedTimesheetSubmit} className="space-y-4">
-                        <div className="max-w-xs">
-                          <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Payroll Fortnight Range</label>
-                          <select value={selectedFortnight} onChange={(e) => setSelectedFortnight(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-sky-400 font-bold outline-none">
-                            {fortnights.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-                          </select>
-                        </div>
-                        <div className="space-y-3">
-                          {timesheetRows.map((row, idx) => (
-                            <div key={idx} className="p-4 bg-slate-950 border border-slate-850 rounded-xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                              <input type="date" required value={row.date} onChange={(e) => updateTimesheetRowValue(idx, 'date', e.target.value)} className="bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 outline-none" />
-                              <div className="grid grid-cols-2 gap-1">
-                                <input type="time" required value={row.start} onChange={(e) => updateTimesheetRowValue(idx, 'start', e.target.value)} className="bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 outline-none" />
-                                <input type="time" required value={row.end} onChange={(e) => updateTimesheetRowValue(idx, 'end', e.target.value)} className="bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 outline-none" />
-                              </div>
-                              <select required value={row.client} onChange={(e) => updateTimesheetRowValue(idx, 'client', e.target.value)} className="bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-400 outline-none">
-                                <option value="">-- Choose Participant --</option>
-                                {participants.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
-                              </select>
-                              <div className="grid grid-cols-2 gap-1">
-                                <input type="number" placeholder="KM Client" value={row.kmWith} onChange={(e) => updateTimesheetRowValue(idx, 'kmWith', e.target.value)} className="bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 outline-none" />
-                                <input type="number" placeholder="KM Car" value={row.kmWithout} onChange={(e) => updateTimesheetRowValue(idx, 'kmWithout', e.target.value)} className="bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 outline-none" />
-                              </div>
-                              <input type="text" required placeholder="Shift note description metrics..." value={row.notes} onChange={(e) => updateTimesheetRowValue(idx, 'notes', e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 sm:col-span-2 lg:col-span-4 outline-none" />
-                            </div>
-                          ))}
-                        </div>
-                        <button type="button" onClick={addTimesheetRow} className="bg-slate-950 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700 text-[10px] font-black uppercase tracking-wider px-4 py-2.5 rounded-xl">➕ Add Shift Row to Fortnight Stack</button>
-                        <div className="flex items-start space-x-3 bg-slate-950 p-4 rounded-xl border border-slate-850">
-                          <input type="checkbox" required id="notesCheck" checked={tsNotesChecked} onChange={(e) => setTsNotesChecked(e.target.checked)} className="w-4 h-4 mt-0.5 bg-slate-900 border border-slate-800 rounded accent-sky-500" />
-                          <label htmlFor="notesCheck" className="text-[11px] text-slate-400 font-medium">I verify that my comprehensive shift case notes have been officially logged and filed across client management streams.</label>
-                        </div>
-                        <button type="submit" className="w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-slate-950 font-black text-xs uppercase py-3.5 rounded-xl shadow-md transition-all transform active:scale-95">Transmit Fortnight Timesheet Remittance Package</button>
-                      </form>
-                    </div>
-                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 h-fit shadow-xl">
-                      <h3 className="text-xs font-black tracking-widest text-slate-400 uppercase">Remittance History Log</h3>
+                    <div className="bg-white border border-gray-200 rounded-xl p-6 md:col-span-2 space-y-3 shadow-sm">
+                      <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wide">Next Roster Items</h4>
                       <div className="space-y-2">
-                        {timesheetHistory.map(ts => (
-                          <div key={ts.id} className="bg-slate-950 p-4 rounded-xl border border-slate-850 text-xs">
-                            <span className="font-mono text-sky-400 font-bold text-[10px] block border-b border-slate-850 pb-1 mb-1">REFPACK: #{ts.id}</span>
-                            <p className="font-bold text-slate-200">{ts.fortnightLabel}</p>
-                            <p className="text-slate-400 text-[11px]">Logged Volume: {ts.rowsCount} Days worked (~{ts.totalHours}h)</p>
+                        {shifts.filter(s => s.staff_id === user.id).slice(0, 2).map(s => (
+                          <div key={s.id} className="bg-gray-50 p-3 rounded border border-gray-200 flex items-center justify-between text-xs">
+                            <span className="font-bold text-gray-800 uppercase tracking-wide">{s.title}</span>
+                            <span className="font-mono text-gray-500">{new Date(s.start_time).toLocaleDateString('en-AU')}</span>
                           </div>
                         ))}
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="bg-white border border-gray-200 p-6 rounded-xl shadow-sm">
+                      <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Company Workforce Size</span>
+                      <span className="text-lg font-bold text-gray-800 block">{profiles.length} Active System Profiles</span>
+                    </div>
+                    <div className="bg-white border border-gray-200 p-6 rounded-xl shadow-sm">
+                      <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Active Client Registry</span>
+                      <span className="text-lg font-bold text-gray-800 block">{participants.length} Participant Records</span>
+                    </div>
+                    <div className="bg-white border border-gray-200 p-6 rounded-xl shadow-sm border-l-4 border-l-red-500">
+                      <span className="block text-[10px] font-bold text-red-500 uppercase tracking-wide mb-1">Unassigned Shifts</span>
+                      <span className="text-lg font-bold text-red-600 block">{shifts.filter(s => !s.staff_id).length} Shifts Open</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
-            </div>
-          )}
-        </main>
-      </div>
+            {/* TAB 2: ADMIN CENTRE (Item 2 requested modifications + Notification Badger) */}
+            {currentTab === 'director' && user.role === 'director' && (
+              <div className="space-y-6">
+                <div className="border-b border-gray-200 pb-4">
+                  <h2 className="text-base font-bold uppercase tracking-wider text-blue-900">Admin Centre</h2>
+                  <p className="text-xs text-gray-500">Configure core personnel registries and evaluate submitted provider timesheets.</p>
+                </div>
+
+                {/* Submissions Alerts Banner Flag logic */}
+                {timesheetHistory.length > 0 && (
+                  <div className="p-4 bg-yellow-50 border border-yellow-200 text-xs rounded-xl flex items-center justify-between text-yellow-800 shadow-sm animate-pulse">
+                    <span className="font-bold uppercase tracking-wide">Notification: Employee Timesheet Packets Have Been Received and Await Review</span>
+                    <span className="bg-yellow-600 text-white font-bold px-2 py-0.5 rounded font-mono text-[10px]">{timesheetHistory.length} New</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                  
+                  {/* Worker Creation Form */}
+                  <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4 shadow-sm">
+                    <h3 className="text-xs font-bold text-blue-900 uppercase tracking-wide">Register Support Worker</h3>
+                    <form onSubmit={handleRegisterWorker} className="space-y-3">
+                      <div>
+                        <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">Full Legal Name</label>
+                        <input type="text" required value={workerName} onChange={(e) => setWorkerName(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none" />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">Contact Email Address</label>
+                          <input type="email" required value={workerEmail} onChange={(e) => setWorkerEmail(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none" />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">Contact Phone Number</label>
+                          <input type="text" required value={workerPhone} onChange={(e) => setWorkerPhone(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">Administrative / Onboarding Compliance Notes</label>
+                        <textarea value={workerNotes} onChange={(e) => setWorkerNotes(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 h-16 resize-none focus:outline-none" />
+                      </div>
+                      <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase py-2.5 rounded shadow transition-all">
+                        Create Support Worker Account
+                      </button>
+                    </form>
+                    {generatedPassword && (
+                      <p className="text-[11px] font-mono text-gray-600 bg-gray-50 p-2 rounded border border-gray-200 select-all">Secure Temporary Key: {generatedPassword}</p>
+                    )}
+                  </div>
+
+                  {/* Participant Creation Form */}
+                  <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4 shadow-sm">
+                    <h3 className="text-xs font-bold text-blue-900 uppercase tracking-wide">Register Participant Account</h3>
+                    <form onSubmit={handleRegisterParticipant} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="sm:col-span-2">
+                        <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">Participant Identity Name</label>
+                        <input type="text" required value={partName} onChange={(e) => setPartName(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">NDIS Reference Number</label>
+                        <input type="text" required value={partNdis} onChange={(e) => setPartNdis(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">Primary Phone Number</label>
+                        <input type="text" required value={partPhone} onChange={(e) => setPartPhone(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">Emergency Representative Name</label>
+                        <input type="text" required value={partEmergName} onChange={(e) => setPartEmergName(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">Emergency representative Phone</label>
+                        <input type="text" required value={partEmergPhone} onChange={(e) => setPartEmergPhone(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none" />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">Strategic Support Notes</label>
+                        <textarea value={partNotes} onChange={(e) => setPartNotes(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 h-16 resize-none focus:outline-none" />
+                      </div>
+                      <button type="submit" className="sm:col-span-2 bg-gray-800 hover:bg-gray-900 text-white font-bold text-xs uppercase py-2.5 rounded shadow transition-all">
+                        Register Card Entry
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Active Employee Timesheets Monitor Board Deck */}
+                  <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm xl:col-span-2 space-y-3">
+                    <h3 className="text-xs font-bold text-blue-900 uppercase tracking-wide">Submitted Workforce Timesheets Queue</h3>
+                    <div className="border border-gray-200 rounded-lg bg-gray-50 divide-y divide-gray-200 max-h-64 overflow-y-auto">
+                      {timesheetHistory.map(ts => (
+                        <div key={ts.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-gray-700 bg-white">
+                          <div className="space-y-0.5">
+                            <span className="font-bold text-gray-900 block uppercase tracking-wide">Filer: {ts.workerName} ({ts.workerEmail})</span>
+                            <span className="block font-medium text-blue-600">{ts.fortnightLabel} | Volume: {ts.rowsCount} Rows Filed</span>
+                          </div>
+                          <div className="text-left sm:text-right font-mono text-[11px] text-gray-400">
+                            <span className="block font-bold text-gray-800">Hours Registered: ~{ts.totalHours}h</span>
+                            <span className="block text-[10px]">Received: {ts.submittedDate}</span>
+                          </div>
+                        </div>
+                      ))}
+                      {timesheetHistory.length === 0 && (
+                        <p className="text-center py-8 text-xs text-gray-400 font-medium tracking-wide">No incoming fortnightly timesheet submission packets pending audit review.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 3: CALENDAR WORKSPACE AND THE MULTI-USE SCHEDULING ENGINE VIEWPORT (Item 3 & 5) */}
+            {currentTab === 'rosters' && (
+              <div className="space-y-6">
+                <div className="border-b border-gray-200 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <h2 className="text-base font-bold uppercase tracking-wider text-blue-900">Calendar</h2>
+                    <p className="text-xs text-gray-500">Deploy events, route unassigned shifts highlighted in solid red blocks, and execute layout parameters.</p>
+                  </div>
+                  <div className="bg-white border border-gray-200 p-1 rounded-lg flex space-x-1 shadow-sm">
+                    {['day', 'week', 'month'].map(v => (
+                      <button key={v} onClick={() => setCalendarView(v)} className={`px-3 py-1 rounded text-[9px] font-black uppercase tracking-wider transition-all ${calendarView === v ? 'bg-blue-600 text-white shadow' : 'text-gray-500 hover:text-gray-800'}`}>{v}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Simplified Tracking Category Filters Matrix Container layout */}
+                <div className="bg-white border border-gray-200 p-4 rounded-xl grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 shadow-sm">
+                  <div>
+                    <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">Calendar Filter Scope</label>
+                    <select value={calendarScope} onChange={(e) => { setCalendarScope(e.target.value); setSelectedCalendarTargetId(''); }} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs font-bold text-gray-700 focus:outline-none">
+                      <option value="combined">Combined Calendar</option>
+                      <option value="admin">Admin Calendar</option>
+                      <option value="worker">Staff Calendars</option>
+                      <option value="participant">Participant Calendars</option>
+                    </select>
+                  </div>
+
+                  {calendarScope === 'worker' && (
+                    <div>
+                      <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">Select Employee Profile</label>
+                      <select value={selectedCalendarTargetId} onChange={(e) => setSelectedCalendarTargetId(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs font-bold text-blue-600 focus:outline-none">
+                        <option value="">-- Choose Personnel --</option>
+                        {workerList.map(w => <option key={w.id} value={w.id}>{w.full_name}</option>)}
+                      </select>
+                    </div>
+                  )}
+
+                  {calendarScope === 'participant' && (
+                    <div>
+                      <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">Select Client Card</label>
+                      <select value={selectedCalendarTargetId} onChange={(e) => setSelectedCalendarTargetId(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs font-bold text-blue-600 focus:outline-none">
+                        <option value="">-- Choose Client --</option>
+                        {participants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                {/* THE MULTI-USE SCHEDULING WIZARD MODULE COMPONENT (Item 3 Requested custom upgrade!) */}
+                {user.role === 'director' && (
+                  <div className="bg-white border border-gray-200 p-6 rounded-xl shadow-sm space-y-4">
+                    <div className="flex items-center space-x-3 border-b border-gray-100 pb-2">
+                      <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wider">Quick Allocate Multi-Use Entry Module</h4>
+                      <div className="flex items-center space-x-1 bg-gray-100 p-0.5 rounded-lg border border-gray-200">
+                        <button type="button" onClick={() => setEventCategory('shift')} className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase transition-all ${eventCategory === 'shift' ? 'bg-blue-600 text-white shadow' : 'text-gray-500'}`}>Shift Mode</button>
+                        <button type="button" onClick={() => setEventCategory('event')} className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase transition-all ${eventCategory === 'event' ? 'bg-blue-600 text-white shadow' : 'text-gray-500'}`}>Corporate Event Mode</button>
+                      </div>
+                    </div>
+
+                    <form onSubmit={handleCreateShift} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                      <div className="sm:col-span-2 md:col-span-1">
+                        <label className="block text-[8px] font-bold uppercase text-gray-400 mb-1">Description Label</label>
+                        <input type="text" required placeholder="e.g. Skill Outing / Meeting" value={shiftTitle} onChange={(e) => setShiftTitle(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs focus:border-blue-500 text-gray-800 outline-none" />
+                      </div>
+                      <div>
+                        <label className="block text-[8px] font-bold uppercase text-gray-400 mb-1">Support Worker Field</label>
+                        <select value={shiftWorkerId} onChange={(e) => setShiftWorkerId(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs text-gray-600 focus:border-blue-500 outline-none">
+                          <option value="">Leave Unassigned (Red Alert)</option>
+                          {workerList.map(w => <option key={w.id} value={w.id}>{w.full_name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[8px] font-bold uppercase text-gray-400 mb-1">Participant Field</label>
+                        <select value={shiftParticipantId} onChange={(e) => setShiftParticipantId(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs text-gray-600 focus:border-blue-500 outline-none">
+                          <option value="">Corporate Administrative Line</option>
+                          {participants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[8px] font-bold uppercase text-gray-400 mb-1">Target Date</label>
+                        <input type="date" required value={shiftDate} onChange={(e) => setShiftDate(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs focus:border-blue-500 outline-none" />
+                      </div>
+                      <div>
+                        <label className="block text-[8px] font-bold uppercase text-gray-400 mb-1">Start Time</label>
+                        <input type="time" required value={shiftStart} onChange={(e) => setShiftStart(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs focus:border-blue-500 outline-none" />
+                      </div>
+                      <div>
+                        <label className="block text-[8px] font-bold uppercase text-gray-400 mb-1">End Time</label>
+                        <input type="time" required value={shiftEnd} onChange={(e) => setShiftEnd(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs focus:border-blue-500 outline-none" />
+                      </div>
+                      <div className="sm:col-span-2 md:col-span-3 lg:col-span-5">
+                        <label className="block text-[8px] font-bold uppercase text-gray-400 mb-1">Special Reminders / Compliance Directives Summary Notes</label>
+                        <input type="text" placeholder="Add specific medication requirements, guidelines, or travel alerts..." value={shiftDirectives} onChange={(e) => setShiftDirectives(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs focus:border-blue-500 text-gray-800 outline-none" />
+                      </div>
+                      <div className="flex items-end">
+                        <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase rounded-lg py-2.5 shadow transition-all transform active:scale-95 tracking-wider">Publish Entry</button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
+                {/* Render Grid Stream Canvas Block */}
+                <div className="bg-white border border-gray-200 rounded-xl shadow-sm divide-y divide-gray-200 overflow-hidden">
+                  {shifts
+                    .filter(s => {
+                      if (calendarScope === 'admin') return !s.participant_id;
+                      if (calendarScope === 'worker' && selectedCalendarTargetId) return s.staff_id === selectedCalendarTargetId;
+                      if (calendarScope === 'participant' && selectedCalendarTargetId) return s.participant_id === selectedCalendarTargetId;
+                      return true;
+                    })
+                    .map(s => {
+                      const isUnclaimed = !s.staff_id || s.status === 'available';
+                      const workerObj = profiles.find(p => p.id === s.staff_id);
+                      const clientObj = participants.find(p => p.id === s.participant_id);
+
+                      return (
+                        <div key={s.id} className={`p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4 transition-all bg-white ${isUnclaimed ? 'border-l-4 border-l-red-500 bg-red-50/20' : 'border-l-4 border-l-blue-600'}`}>
+                          <div className="space-y-1 text-xs">
+                            <div className="flex items-center space-x-2">
+                              <h4 className="font-bold text-gray-900 uppercase tracking-wide">{s.title}</h4>
+                              {isUnclaimed && <span className="text-[9px] font-bold tracking-widest bg-red-100 text-red-700 px-2 py-0.5 rounded uppercase">Unclaimed</span>}
+                            </div>
+                            <p className="text-gray-500 font-mono font-medium">
+                              Date: {new Date(s.start_time).toLocaleDateString('en-AU')} | Time: {new Date(s.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {new Date(s.end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </p>
+                            <p className="text-gray-400 font-semibold uppercase text-[10px]">
+                              Personnel: <span className="text-gray-600 font-bold">{workerObj ? workerObj.full_name : 'Unassigned'}</span> | Client: <span className="text-gray-600 font-bold">{clientObj ? clientObj.name : 'Internal Administrative task'}</span>
+                            </p>
+                            {s.manager_directives && <p className="text-gray-500 italic bg-gray-50 p-2 rounded border border-gray-200 max-w-xl">Directive: "{s.manager_directives}"</p>}
+                          </div>
+
+                          {isUnclaimed && user.role === 'support_worker' && (
+                            <button onClick={() => handleClaimUnclaimedShift(s.id)} className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase px-4 py-2 rounded shadow transition-all transform active:scale-95">Claim Shift</button>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+
+            {/* PAGE 4: PARTICIPANT PROFILES (Item 4 requested expander modifications) */}
+            {currentTab === 'profiles' && (
+              <div className="space-y-6">
+                <div className="border-b border-gray-200 pb-4">
+                  <h2 className="text-base font-bold uppercase tracking-wider text-blue-900">Participant Profiles</h2>
+                  <p className="text-xs text-gray-500">Review emergency coordination maps and behavioral check directives parameters.</p>
+                </div>
+
+                <div className="space-y-2">
+                  {participants.map(p => {
+                    const isOpen = expandedClient === p.id;
+                    return (
+                      <div key={p.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                        <div onClick={() => setExpandedClient(isOpen ? null : p.id)} className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-all select-none">
+                          <span className="font-bold text-xs uppercase tracking-wide text-gray-800">{p.name}</span>
+                          <span className="text-xs font-bold text-blue-600">{isOpen ? 'COLLAPSE ▲' : 'EXPAND DETAILS ▼'}</span>
+                        </div>
+
+                        {isOpen && (
+                          <div className="p-5 bg-gray-50/50 border-t border-gray-200 space-y-4 text-xs">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                              <div className="bg-white p-3 rounded border border-gray-200">
+                                <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Telephone Primary</span>
+                                <p className="font-mono font-bold text-gray-700">{p.primary_contact_phone || 'Unlisted'}</p>
+                              </div>
+                              <div className="bg-white p-3 rounded border border-gray-200">
+                                <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">NDIS Key Code</span>
+                                <p className="font-mono font-bold text-gray-700">{p.ndis_number || 'Unlisted'}</p>
+                              </div>
+                              <div className="bg-white p-3 rounded border border-gray-200">
+                                <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Emergency Representative Line</span>
+                                <p className="font-bold text-gray-700 uppercase">{p.emergency_contact_name || 'Not logged'}</p>
+                                <p className="font-mono font-bold text-blue-600">{p.emergency_contact_phone || ''}</p>
+                              </div>
+                            </div>
+                            <div className="bg-white p-4 rounded border border-gray-200 space-y-1">
+                              <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Operational Care Directives notes</span>
+                              <p className="text-gray-600 leading-relaxed font-medium">{p.about_me_notes || 'No active support records populated inside metadata container rows.'}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 5: AVAILABILITIES STACKED WEEKEND UPGRADE MODULE (Item 6 requested modifications) */}
+            {currentTab === 'availability' && (
+              <div className="space-y-6">
+                <div className="border-b border-gray-200 pb-4">
+                  <h2 className="text-base font-bold uppercase tracking-wider text-blue-900">Availabilities</h2>
+                  <p className="text-xs text-gray-500">File your complete weekend and weekday scheduling availability windows all at once.</p>
+                </div>
+
+                <form onSubmit={handleStackedAvailabilitySubmit} className="bg-white border border-gray-200 rounded-xl p-6 space-y-6 shadow-sm">
+                  <div className="max-w-xs">
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Target Payroll Fortnight Range</label>
+                    <select value={availFortnight} onChange={(e) => setAvailFortnight(e.target.value)} className="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-xs text-blue-600 font-bold focus:outline-none">
+                      {fortnights.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="border border-gray-200 rounded-xl overflow-hidden bg-white divide-y divide-gray-200">
+                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => {
+                      const state = availDaysState[day];
+                      return (
+                        <div key={day} className="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white hover:bg-gray-50 transition-all">
+                          <span className="text-xs font-bold uppercase tracking-wide text-gray-700 w-24">{day}</span>
+                          <div className="flex flex-wrap gap-2 items-center">
+                            <button type="button" onClick={() => updateAvailabilityMode(day, 'standard')} className={`px-3 py-1 rounded text-[10px] font-bold uppercase border transition-all ${state.mode === 'standard' ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white border-gray-300 text-gray-500'}`}>Specific Hours</button>
+                            <button type="button" onClick={() => updateAvailabilityMode(day, 'allday')} className={`px-3 py-1 rounded text-[10px] font-bold uppercase border transition-all ${state.mode === 'allday' ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white border-gray-300 text-gray-500'}`}>Available All Day</button>
+                            <button type="button" onClick={() => updateAvailabilityMode(day, 'unavailable')} className={`px-3 py-1 rounded text-[10px] font-bold uppercase border transition-all ${state.mode === 'unavailable' ? 'bg-red-50 text-red-600 border-red-200 shadow-sm' : 'bg-white border-gray-300 text-gray-500'}`}>Not Available</button>
+                          </div>
+
+                          {state.mode === 'standard' && (
+                            <div className="flex items-center space-x-2">
+                              <input type="time" value={state.start} onChange={(e) => updateAvailabilityTimes(day, 'start', e.target.value)} className="bg-gray-50 border border-gray-300 rounded p-1 text-xs outline-none focus:border-blue-500" />
+                              <span className="text-[10px] text-gray-400 font-bold">TO</span>
+                              <input type="time" value={state.end} onChange={(e) => updateAvailabilityTimes(day, 'end', e.target.value)} className="bg-gray-50 border border-gray-300 rounded p-1 text-xs outline-none focus:border-blue-500" />
+                            </div>
+                          )}
+                          {state.mode === 'allday' && <span className="text-[9px] font-bold tracking-wide text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 uppercase">Available Full 24h</span>}
+                          {state.mode === 'unavailable' && <span className="text-[9px] font-bold tracking-wide text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-200 uppercase">Unavailable Block</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase py-3 rounded shadow transition-all transform active:scale-95">
+                    Submit Entire Fortnight Availabilities Block
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* TAB 6: FORTNIGHTLY COMPREHENSIVE TIMESHEET REMITTANCE MODULE (Item 7 requested modifications) */}
+            {currentTab === 'timesheets' && (
+              <div className="space-y-6">
+                <div className="border-b border-gray-200 pb-4">
+                  <h2 className="text-base font-bold uppercase tracking-wider text-blue-900">Timesheet Submissions</h2>
+                  <p className="text-xs text-gray-500">File multi-day stacked shift entries at the close of your pay cycle range.</p>
+                </div>
+
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                  
+                  {/* Master Stacked Form Module View component */}
+                  <div className="bg-white border border-gray-200 rounded-xl p-6 xl:col-span-2 space-y-4 shadow-sm h-fit">
+                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium leading-relaxed text-gray-600">
+                      Instructions: Select your reporting pay range dropdown key code. Fill out details for each day worked. Click **"Add Shift Row to Fortnight Stack"** to dynamically chain entries all at once before pushing the irreversible production submission ledger at the base.
+                    </div>
+
+                    <form onSubmit={handleStackedTimesheetSubmit} className="space-y-4">
+                      <div className="max-w-xs">
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Active Payroll Period Range</label>
+                        <select value={selectedFortnight} onChange={(e) => setSelectedFortnight(e.target.value)} className="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-xs text-blue-600 font-bold focus:outline-none">
+                          {fortnights.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                        </select>
+                      </div>
+
+                      {/* Stack rows input loop matrix canvas grid items */}
+                      <div className="space-y-3">
+                        {timesheetRows.map((row, idx) => (
+                          <div key={idx} className="p-4 bg-gray-50 border border-gray-200 rounded-lg grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                            <div>
+                              <label className="block text-[8px] font-bold text-gray-400 uppercase mb-1">Date Worked</label>
+                              <input type="date" required value={row.date} onChange={(e) => updateTimesheetRowValue(idx, 'date', e.target.value)} className="w-full bg-white border border-gray-300 rounded p-1.5 text-xs outline-none" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-1">
+                              <div>
+                                <label className="block text-[8px] font-bold text-gray-400 uppercase mb-1">Start Time</label>
+                                <input type="time" required value={row.start} onChange={(e) => updateTimesheetRowValue(idx, 'start', e.target.value)} className="w-full bg-white border border-gray-300 rounded p-1.5 text-xs outline-none" />
+                              </div>
+                              <div>
+                                <label className="block text-[8px] font-bold text-gray-400 uppercase mb-1">End Time</label>
+                                <input type="time" required value={row.end} onChange={(e) => updateTimesheetRowValue(idx, 'end', e.target.value)} className="w-full bg-white border border-gray-300 rounded p-1.5 text-xs outline-none" />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-[8px] font-bold text-gray-400 uppercase mb-1">Participant Entity</label>
+                              <select required value={row.client} onChange={(e) => updateTimesheetRowValue(idx, 'client', e.target.value)} className="w-full bg-white border border-gray-300 rounded p-1.5 text-xs text-gray-600 outline-none">
+                                <option value="">-- Pick Client --</option>
+                                {participants.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                              </select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-1">
+                              <div>
+                                <label className="block text-[8px] font-bold text-gray-400 uppercase mb-1">KM (With Client)</label>
+                                <input type="number" value={row.kmWith} onChange={(e) => updateTimesheetRowValue(idx, 'kmWith', e.target.value)} className="w-full bg-white border border-gray-300 rounded p-1.5 text-xs outline-none" />
+                              </div>
+                              <div>
+                                <label className="block text-[8px] font-bold text-gray-400 uppercase mb-1">KM (Personal Car)</label>
+                                <input type="number" value={row.kmWithout} onChange={(e) => updateTimesheetRowValue(idx, 'kmWithout', e.target.value)} className="w-full bg-white border border-gray-300 rounded p-1.5 text-xs outline-none" />
+                              </div>
+                            </div>
+                            <div className="sm:col-span-2 lg:col-span-4">
+                              <label className="block text-[8px] font-bold text-gray-400 uppercase mb-1">Shift Progression Summary Narrative notes</label>
+                              <input type="text" required placeholder="Log specific objectives reached, outings completed, medication notes..." value={row.notes} onChange={(e) => updateTimesheetRowValue(idx, 'notes', e.target.value)} className="w-full bg-white border border-gray-300 rounded p-1.5 text-xs outline-none focus:border-blue-500" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <button type="button" onClick={addTimesheetRow} className="bg-white hover:bg-gray-100 text-gray-700 font-bold border border-gray-300 text-[10px] uppercase px-4 py-2 rounded transition-colors">
+                        Add Shift Row to Fortnight Stack
+                      </button>
+
+                      <div className="flex items-start space-x-3 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <input type="checkbox" required id="notesCheck" checked={tsNotesChecked} onChange={(e) => setTsNotesChecked(e.target.checked)} className="w-4 h-4 mt-0.5 border-gray-300 rounded accent-blue-600" />
+                        <label htmlFor="notesCheck" className="text-[11px] text-gray-500 font-medium select-none">I explicitly verify and assert that my corresponding client shift progression logs and case notes have been completely filled and filed.</label>
+                      </div>
+
+                      <div className="p-3 bg-red-50 border border-red-100 text-[9px] font-bold uppercase tracking-wide text-red-600 rounded-lg">
+                        Notice: Once a fortnightly timesheet submission bundle is committed, entries lock securely and values cannot be changed or edited.
+                      </div>
+
+                      <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase py-3 rounded shadow transition-all transform active:scale-95">
+                        Transmit Fortnightly Timesheet Remittance Package
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Filer Personal History Monitor Sidebar Box widget */}
+                  <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm h-fit space-y-4">
+                    <h3 className="text-xs font-bold text-blue-900 uppercase tracking-wide">Your Personal Remittance History</h3>
+                    <div className="space-y-2">
+                      {timesheetHistory.filter(h => h.workerEmail === user.email).map(ts => (
+                        <div key={ts.id} className="bg-gray-50 border border-gray-200 rounded p-3 text-xs space-y-1">
+                          <span className="block font-mono text-[10px] font-bold text-blue-600">LEDGER BUNDLE: #{ts.id}</span>
+                          <p className="font-bold text-gray-800 uppercase tracking-wide">{ts.fortnightLabel}</p>
+                          <div className="flex justify-between items-center text-[11px] text-gray-400 font-semibold">
+                            <span>Filed: {ts.rowsCount} Days</span>
+                            <span>Sum: ~{ts.totalHours}h Logged</span>
+                          </div>
+                        </div>
+                      ))}
+                      {timesheetHistory.filter(h => h.workerEmail === user.email).length === 0 && (
+                        <p className="text-[11px] text-gray-400 italic text-center py-6">No fortnightly bundles submitted during this workspace active session.</p>
+                      )}
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            )}
+
+          </div>
+        )}
+      </main>
     </div>
   );
 }

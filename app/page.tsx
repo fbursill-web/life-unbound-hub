@@ -49,7 +49,7 @@ export default function LifeUnboundPortal() {
   const [partNotes, setPartNotes] = useState('');
 
   // Multi-Use Calendar Inputs
-  const [eventCategory, setEventCategory] = useState('shift'); // 'shift', 'event'
+  const [eventCategory, setEventCategory] = useState('shift'); 
   const [shiftTitle, setShiftTitle] = useState('');
   const [shiftWorkerId, setShiftWorkerId] = useState('');
   const [shiftParticipantId, setShiftParticipantId] = useState('');
@@ -133,7 +133,7 @@ export default function LifeUnboundPortal() {
         showToast('No user profile found matching that email.', 'error');
       } else if (data.password_mock === loginPassword.trim()) {
         if (portalType === 'admin' && data.role !== 'director') {
-          showToast('Access denied. This user does not have administrative rights.', 'error');
+          showToast('Access denied. Administrative privileges required.', 'error');
           setLoading(false);
           return;
         }
@@ -144,8 +144,8 @@ export default function LifeUnboundPortal() {
         showToast('Invalid access credentials.', 'error');
       }
     } catch (err) {
-      showToast('Handshake rejected. Verify system keys.', 'error');
-    } final {
+      showToast('Connection handshake rejected.', 'error');
+    } finally {
       setLoading(false);
     }
   };
@@ -302,7 +302,7 @@ export default function LifeUnboundPortal() {
     };
 
     setTimesheetHistory([masterLogBlock, ...timesheetHistory]);
-    showToast('Fortnightly timesheet package filed securely.', 'success');
+    showToast('Fortnightly timesheet packet filed securely.', 'success');
     setTimesheetRows([{ date: '', start: '', end: '', client: '', kmWith: '0', kmWithout: '0', notes: '' }]);
     setTsNotesChecked(false);
   };
@@ -339,15 +339,14 @@ export default function LifeUnboundPortal() {
   const userAllocatedHoursSum = shifts.filter(s => s.staff_id === user?.id).length * 8;
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col antialiased font-sans">
+    <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col antialiased font-sans selection:bg-blue-500/30">
       
-      {/* Clean Light Navigation Header */}
       <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center space-x-4">
           <div className="w-12 h-12 relative flex items-center justify-center rounded-lg border border-gray-200 p-1 bg-white">
             <img 
               src="/logo.png" 
-              alt={"LU Logo"} 
+              alt="LU Logo" 
               className="max-h-full max-w-full object-contain rounded"
               onError={(e)=>{ (e.target as HTMLImageElement).src = 'https://wgtcvmyofcoikynyftwn.supabase.co/storage/v1/object/public/assets/logo-fallback.png'; }}
             />
@@ -375,55 +374,22 @@ export default function LifeUnboundPortal() {
         </div>
       </header>
 
-      {/* TOP NAVIGATION LINK SYSTEM (Replaced the sidebar layout!) */}
       {user && (
         <nav className="bg-white border-b border-gray-200 px-6 py-2 flex flex-wrap gap-2 shadow-sm">
-          <button 
-            onClick={() => setCurrentTab('dashboard')}
-            className={`px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all ${currentTab === 'dashboard' ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:bg-gray-100'}`}
-          >
-            Dashboards
-          </button>
+          <button onClick={() => setCurrentTab('dashboard')} className={`px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all ${currentTab === 'dashboard' ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:bg-gray-100'}`}>Dashboards</button>
           {user.role === 'director' && (
-            <button 
-              onClick={() => setCurrentTab('director')}
-              className={`px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all ${currentTab === 'director' ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:bg-gray-100'}`}
-            >
-              Admin Centre
-            </button>
+            <button onClick={() => setCurrentTab('director')} className={`px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all ${currentTab === 'director' ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:bg-gray-100'}`}>Admin Centre</button>
           )}
-          <button 
-            onClick={() => setCurrentTab('rosters')}
-            className={`px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all ${currentTab === 'rosters' ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:bg-gray-100'}`}
-          >
-            Calendar
-          </button>
-          <button 
-            onClick={() => setCurrentTab('profiles')}
-            className={`px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all ${currentTab === 'profiles' ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:bg-gray-100'}`}
-          >
-            Participant Profiles
-          </button>
+          <button onClick={() => setCurrentTab('rosters')} className={`px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all ${currentTab === 'rosters' ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:bg-gray-100'}`}>Calendar</button>
+          <button onClick={() => setCurrentTab('profiles')} className={`px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all ${currentTab === 'profiles' ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:bg-gray-100'}`}>Participant Profiles</button>
           <div className="w-px bg-gray-200 h-6 my-auto mx-1" />
-          <button 
-            onClick={() => setCurrentTab('availability')}
-            className={`px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all ${currentTab === 'availability' ? 'bg-blue-600 text-white shadow' : 'text-gray-500 hover:bg-gray-100'}`}
-          >
-            Availabilities
-          </button>
-          <button 
-            onClick={() => setCurrentTab('timesheets')}
-            className={`px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all ${currentTab === 'timesheets' ? 'bg-blue-600 text-white shadow' : 'text-gray-500 hover:bg-gray-100'}`}
-          >
-            Timesheet Submissions
-          </button>
+          <button onClick={() => setCurrentTab('availability')} className={`px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all ${currentTab === 'availability' ? 'bg-blue-600 text-white shadow' : 'text-gray-500 hover:bg-gray-100'}`}>Availabilities</button>
+          <button onClick={() => setCurrentTab('timesheets')} className={`px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all ${currentTab === 'timesheets' ? 'bg-blue-600 text-white shadow' : 'text-gray-500 hover:bg-gray-100'}`}>Timesheet Submissions</button>
         </nav>
       )}
 
-      {/* Main App Canvas */}
       <main className="flex-1 p-6 sm:p-8 w-full mx-auto max-w-7xl">
         
-        {/* Toast Notification Container */}
         {notification && (
           <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 max-w-sm w-full px-4">
             <div className={`p-4 rounded border text-xs font-bold shadow-lg bg-white ${notification.type === 'success' ? 'border-blue-500 text-blue-600' : 'border-red-500 text-red-600'}`}>
@@ -432,29 +398,17 @@ export default function LifeUnboundPortal() {
           </div>
         )}
 
-        {/* SPLIT ENTRY LOG-IN GATE SYSTEM (Item 1 & Design Cleanup) */}
         {!user && !portalType && (
           <div className="max-w-md mx-auto my-16 bg-white border border-gray-200 shadow-lg rounded-xl p-8 space-y-6 text-center">
             <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400">Portal Entry Gateway</h2>
             <p className="text-xs text-gray-500">Select your required application system module workspace level:</p>
             <div className="grid grid-cols-1 gap-3 pt-2">
-              <button 
-                onClick={() => setPortalType('staff')}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider py-4 rounded-lg shadow transition-all transform active:scale-95"
-              >
-                Staff Portal
-              </button>
-              <button 
-                onClick={() => setPortalType('admin')}
-                className="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold text-xs uppercase tracking-wider py-4 rounded-lg shadow transition-all transform active:scale-95"
-              >
-                Admin Portal
-              </button>
+              <button onClick={() => setPortalType('staff')} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider py-4 rounded-lg shadow transition-all transform active:scale-95">Staff Portal</button>
+              <button onClick={() => setPortalType('admin')} className="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold text-xs uppercase tracking-wider py-4 rounded-lg shadow transition-all transform active:scale-95">Admin Portal</button>
             </div>
           </div>
         )}
 
-        {/* Dynamic Contextual Auth Input Panel */}
         {!user && portalType && (
           <div className="max-w-md mx-auto my-12 bg-white border border-gray-200 shadow-lg rounded-xl p-8 space-y-6">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
@@ -466,30 +420,20 @@ export default function LifeUnboundPortal() {
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
                 <label className="block text-[10px] font-bold tracking-wider text-gray-500 uppercase mb-1">Corporate Email Address</label>
-                <input 
-                  type="email" required placeholder="name@lifeunboundsupport.com.au" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-2.5 text-xs text-gray-900 focus:outline-none focus:border-blue-500"
-                />
+                <input type="email" required placeholder="name@lifeunboundsupport.com.au" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} className="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-2.5 text-xs text-gray-900 focus:outline-none" />
               </div>
               <div>
                 <label className="block text-[10px] font-bold tracking-wider text-gray-500 uppercase mb-1">Security Access Password</label>
-                <input 
-                  type="password" required placeholder="••••••••••••" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-2.5 text-xs text-gray-900 focus:outline-none focus:border-blue-500"
-                />
+                <input type="password" required placeholder="••••••••••••" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} className="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-2.5 text-xs text-gray-900 focus:outline-none" />
               </div>
-              <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider py-3 rounded-lg shadow transform active:scale-95 transition-all">
-                Verify Credentials
-              </button>
+              <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider py-3 rounded-lg shadow transform active:scale-95 transition-all">Verify Credentials</button>
             </form>
           </div>
         )}
 
-        {/* ACTIVE DASHBOARD CONTAINER ROUTER */}
         {user && (
           <div className="space-y-6">
             
-            {/* TAB 1: DASHBOARDS (Item 1 requested modifications) */}
             {currentTab === 'dashboard' && (
               <div className="space-y-6">
                 <div className="border-b border-gray-200 pb-4">
@@ -503,7 +447,7 @@ export default function LifeUnboundPortal() {
                       <div className="space-y-1">
                         <span className="text-[10px] font-bold tracking-widest text-blue-600 uppercase block">My Fortnight Hours</span>
                         <h3 className="text-xl font-bold text-gray-800">{userAllocatedHoursSum} Hours Assigned</h3>
-                        <p className="text-xs text-gray-400">Total care hours currently mapped to your active calendar profile for this period.</p>
+                        <p className="text-xs text-gray-400">Total care hours currently mapped to your active calendar profile.</p>
                       </div>
                     </div>
                     <div className="bg-white border border-gray-200 rounded-xl p-6 md:col-span-2 space-y-3 shadow-sm">
@@ -525,7 +469,7 @@ export default function LifeUnboundPortal() {
                       <span className="text-lg font-bold text-gray-800 block">{profiles.length} Active System Profiles</span>
                     </div>
                     <div className="bg-white border border-gray-200 p-6 rounded-xl shadow-sm">
-                      <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Active Client Registry</span>
+                      <span className="block text-[10px] font-bold text-gray-400 tracking-wide mb-1">Active Client Registry</span>
                       <span className="text-lg font-bold text-gray-800 block">{participants.length} Participant Records</span>
                     </div>
                     <div className="bg-white border border-gray-200 p-6 rounded-xl shadow-sm border-l-4 border-l-red-500">
@@ -537,7 +481,6 @@ export default function LifeUnboundPortal() {
               </div>
             )}
 
-            {/* TAB 2: ADMIN CENTRE (Item 2 requested modifications + Notification Badger) */}
             {currentTab === 'director' && user.role === 'director' && (
               <div className="space-y-6">
                 <div className="border-b border-gray-200 pb-4">
@@ -545,17 +488,14 @@ export default function LifeUnboundPortal() {
                   <p className="text-xs text-gray-500">Configure core personnel registries and evaluate submitted provider timesheets.</p>
                 </div>
 
-                {/* Submissions Alerts Banner Flag logic */}
                 {timesheetHistory.length > 0 && (
                   <div className="p-4 bg-yellow-50 border border-yellow-200 text-xs rounded-xl flex items-center justify-between text-yellow-800 shadow-sm animate-pulse">
-                    <span className="font-bold uppercase tracking-wide">Notification: Employee Timesheet Packets Have Been Received and Await Review</span>
+                    <span className="font-bold uppercase tracking-wide">Notification: Employee Timesheet Packets Awaiting Review</span>
                     <span className="bg-yellow-600 text-white font-bold px-2 py-0.5 rounded font-mono text-[10px]">{timesheetHistory.length} New</span>
                   </div>
                 )}
 
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                  
-                  {/* Worker Creation Form */}
                   <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4 shadow-sm">
                     <h3 className="text-xs font-bold text-blue-900 uppercase tracking-wide">Register Support Worker</h3>
                     <form onSubmit={handleRegisterWorker} className="space-y-3">
@@ -565,28 +505,23 @@ export default function LifeUnboundPortal() {
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">Contact Email Address</label>
+                          <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">Contact Email</label>
                           <input type="email" required value={workerEmail} onChange={(e) => setWorkerEmail(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none" />
                         </div>
                         <div>
-                          <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">Contact Phone Number</label>
+                          <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">Contact Phone</label>
                           <input type="text" required value={workerPhone} onChange={(e) => setWorkerPhone(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none" />
                         </div>
                       </div>
                       <div>
-                        <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">Administrative / Onboarding Compliance Notes</label>
+                        <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">Compliance Notes</label>
                         <textarea value={workerNotes} onChange={(e) => setWorkerNotes(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 h-16 resize-none focus:outline-none" />
                       </div>
-                      <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase py-2.5 rounded shadow transition-all">
-                        Create Support Worker Account
-                      </button>
+                      <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase py-2.5 rounded shadow transition-all">Create Support Worker Account</button>
                     </form>
-                    {generatedPassword && (
-                      <p className="text-[11px] font-mono text-gray-600 bg-gray-50 p-2 rounded border border-gray-200 select-all">Secure Temporary Key: {generatedPassword}</p>
-                    )}
+                    {generatedPassword && <p className="text-[11px] font-mono text-gray-600 bg-gray-50 p-2 rounded border border-gray-200 select-all">Key: {generatedPassword}</p>}
                   </div>
 
-                  {/* Participant Creation Form */}
                   <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4 shadow-sm">
                     <h3 className="text-xs font-bold text-blue-900 uppercase tracking-wide">Register Participant Account</h3>
                     <form onSubmit={handleRegisterParticipant} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -595,40 +530,37 @@ export default function LifeUnboundPortal() {
                         <input type="text" required value={partName} onChange={(e) => setPartName(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none" />
                       </div>
                       <div>
-                        <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">NDIS Reference Number</label>
+                        <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">NDIS Number</label>
                         <input type="text" required value={partNdis} onChange={(e) => setPartNdis(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none" />
                       </div>
                       <div>
-                        <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">Primary Phone Number</label>
+                        <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">Phone Number</label>
                         <input type="text" required value={partPhone} onChange={(e) => setPartPhone(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none" />
                       </div>
                       <div>
-                        <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">Emergency Representative Name</label>
+                        <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">Emergency Representative</label>
                         <input type="text" required value={partEmergName} onChange={(e) => setPartEmergName(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none" />
                       </div>
                       <div>
-                        <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">Emergency representative Phone</label>
+                        <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">Emergency Phone</label>
                         <input type="text" required value={partEmergPhone} onChange={(e) => setPartEmergPhone(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none" />
                       </div>
                       <div className="sm:col-span-2">
-                        <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">Strategic Support Notes</label>
+                        <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">Strategic Care Notes</label>
                         <textarea value={partNotes} onChange={(e) => setPartNotes(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 h-16 resize-none focus:outline-none" />
                       </div>
-                      <button type="submit" className="sm:col-span-2 bg-gray-800 hover:bg-gray-900 text-white font-bold text-xs uppercase py-2.5 rounded shadow transition-all">
-                        Register Card Entry
-                      </button>
+                      <button type="submit" className="sm:col-span-2 bg-gray-800 hover:bg-gray-900 text-white font-bold text-xs uppercase py-2.5 rounded shadow transition-all">Register Card Entry</button>
                     </form>
                   </div>
 
-                  {/* Active Employee Timesheets Monitor Board Deck */}
                   <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm xl:col-span-2 space-y-3">
                     <h3 className="text-xs font-bold text-blue-900 uppercase tracking-wide">Submitted Workforce Timesheets Queue</h3>
                     <div className="border border-gray-200 rounded-lg bg-gray-50 divide-y divide-gray-200 max-h-64 overflow-y-auto">
                       {timesheetHistory.map(ts => (
                         <div key={ts.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-gray-700 bg-white">
                           <div className="space-y-0.5">
-                            <span className="font-bold text-gray-900 block uppercase tracking-wide">Filer: {ts.workerName} ({ts.workerEmail})</span>
-                            <span className="block font-medium text-blue-600">{ts.fortnightLabel} | Volume: {ts.rowsCount} Rows Filed</span>
+                            <span className="font-bold text-gray-900 block uppercase tracking-wide">Filer: {ts.workerName}</span>
+                            <span className="block font-medium text-blue-600">{ts.fortnightLabel} | Volume: {ts.rowsCount} Rows</span>
                           </div>
                           <div className="text-left sm:text-right font-mono text-[11px] text-gray-400">
                             <span className="block font-bold text-gray-800">Hours Registered: ~{ts.totalHours}h</span>
@@ -645,7 +577,6 @@ export default function LifeUnboundPortal() {
               </div>
             )}
 
-            {/* TAB 3: CALENDAR WORKSPACE AND THE MULTI-USE SCHEDULING ENGINE VIEWPORT (Item 3 & 5) */}
             {currentTab === 'rosters' && (
               <div className="space-y-6">
                 <div className="border-b border-gray-200 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -660,7 +591,6 @@ export default function LifeUnboundPortal() {
                   </div>
                 </div>
 
-                {/* Simplified Tracking Category Filters Matrix Container layout */}
                 <div className="bg-white border border-gray-200 p-4 rounded-xl grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 shadow-sm">
                   <div>
                     <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wide mb-1">Calendar Filter Scope</label>
@@ -693,7 +623,6 @@ export default function LifeUnboundPortal() {
                   )}
                 </div>
 
-                {/* THE MULTI-USE SCHEDULING WIZARD MODULE COMPONENT (Item 3 Requested custom upgrade!) */}
                 {user.role === 'director' && (
                   <div className="bg-white border border-gray-200 p-6 rounded-xl shadow-sm space-y-4">
                     <div className="flex items-center space-x-3 border-b border-gray-100 pb-2">
@@ -707,46 +636,45 @@ export default function LifeUnboundPortal() {
                     <form onSubmit={handleCreateShift} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                       <div className="sm:col-span-2 md:col-span-1">
                         <label className="block text-[8px] font-bold uppercase text-gray-400 mb-1">Description Label</label>
-                        <input type="text" required placeholder="e.g. Skill Outing / Meeting" value={shiftTitle} onChange={(e) => setShiftTitle(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs focus:border-blue-500 text-gray-800 outline-none" />
+                        <input type="text" required placeholder="Skill Outing / Meeting" value={shiftTitle} onChange={(e) => setShiftTitle(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs text-gray-800 outline-none" />
                       </div>
                       <div>
                         <label className="block text-[8px] font-bold uppercase text-gray-400 mb-1">Support Worker Field</label>
-                        <select value={shiftWorkerId} onChange={(e) => setShiftWorkerId(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs text-gray-600 focus:border-blue-500 outline-none">
+                        <select value={shiftWorkerId} onChange={(e) => setShiftWorkerId(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs text-gray-600 outline-none">
                           <option value="">Leave Unassigned (Red Alert)</option>
                           {workerList.map(w => <option key={w.id} value={w.id}>{w.full_name}</option>)}
                         </select>
                       </div>
                       <div>
                         <label className="block text-[8px] font-bold uppercase text-gray-400 mb-1">Participant Field</label>
-                        <select value={shiftParticipantId} onChange={(e) => setShiftParticipantId(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs text-gray-600 focus:border-blue-500 outline-none">
+                        <select value={shiftParticipantId} onChange={(e) => setShiftParticipantId(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs text-gray-600 outline-none">
                           <option value="">Corporate Administrative Line</option>
                           {participants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                         </select>
                       </div>
                       <div>
                         <label className="block text-[8px] font-bold uppercase text-gray-400 mb-1">Target Date</label>
-                        <input type="date" required value={shiftDate} onChange={(e) => setShiftDate(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs focus:border-blue-500 outline-none" />
+                        <input type="date" required value={shiftDate} onChange={(e) => setShiftDate(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs outline-none" />
                       </div>
                       <div>
                         <label className="block text-[8px] font-bold uppercase text-gray-400 mb-1">Start Time</label>
-                        <input type="time" required value={shiftStart} onChange={(e) => setShiftStart(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs focus:border-blue-500 outline-none" />
+                        <input type="time" required value={shiftStart} onChange={(e) => setShiftStart(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs outline-none" />
                       </div>
                       <div>
                         <label className="block text-[8px] font-bold uppercase text-gray-400 mb-1">End Time</label>
-                        <input type="time" required value={shiftEnd} onChange={(e) => setShiftEnd(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs focus:border-blue-500 outline-none" />
+                        <input type="time" required value={shiftEnd} onChange={(e) => setShiftEnd(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs outline-none" />
                       </div>
                       <div className="sm:col-span-2 md:col-span-3 lg:col-span-5">
-                        <label className="block text-[8px] font-bold uppercase text-gray-400 mb-1">Special Reminders / Compliance Directives Summary Notes</label>
-                        <input type="text" placeholder="Add specific medication requirements, guidelines, or travel alerts..." value={shiftDirectives} onChange={(e) => setShiftDirectives(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs focus:border-blue-500 text-gray-800 outline-none" />
+                        <label className="block text-[8px] font-bold uppercase text-gray-400 mb-1">Special Reminders</label>
+                        <input type="text" placeholder="Add specific medication requirements, travel alerts..." value={shiftDirectives} onChange={(e) => setShiftDirectives(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs text-gray-800 outline-none" />
                       </div>
                       <div className="flex items-end">
-                        <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase rounded-lg py-2.5 shadow transition-all transform active:scale-95 tracking-wider">Publish Entry</button>
+                        <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase rounded-lg py-2.5 shadow transition-all transform active:scale-95 tracking-wider">Publish Entry</button>
                       </div>
                     </form>
                   </div>
                 )}
 
-                {/* Render Grid Stream Canvas Block */}
                 <div className="bg-white border border-gray-200 rounded-xl shadow-sm divide-y divide-gray-200 overflow-hidden">
                   {shifts
                     .filter(s => {
@@ -771,7 +699,7 @@ export default function LifeUnboundPortal() {
                               Date: {new Date(s.start_time).toLocaleDateString('en-AU')} | Time: {new Date(s.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {new Date(s.end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                             </p>
                             <p className="text-gray-400 font-semibold uppercase text-[10px]">
-                              Personnel: <span className="text-gray-600 font-bold">{workerObj ? workerObj.full_name : 'Unassigned'}</span> | Client: <span className="text-gray-600 font-bold">{clientObj ? clientObj.name : 'Internal Administrative task'}</span>
+                              Personnel: <span className="text-gray-600 font-bold">{workerObj ? workerObj.full_name : 'Unassigned'}</span> | Client: <span className="text-gray-600 font-bold">{clientObj ? clientObj.name : 'Internal Task'}</span>
                             </p>
                             {s.manager_directives && <p className="text-gray-500 italic bg-gray-50 p-2 rounded border border-gray-200 max-w-xl">Directive: "{s.manager_directives}"</p>}
                           </div>
@@ -786,7 +714,6 @@ export default function LifeUnboundPortal() {
               </div>
             )}
 
-            {/* PAGE 4: PARTICIPANT PROFILES (Item 4 requested expander modifications) */}
             {currentTab === 'profiles' && (
               <div className="space-y-6">
                 <div className="border-b border-gray-200 pb-4">
@@ -822,8 +749,8 @@ export default function LifeUnboundPortal() {
                               </div>
                             </div>
                             <div className="bg-white p-4 rounded border border-gray-200 space-y-1">
-                              <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Operational Care Directives notes</span>
-                              <p className="text-gray-600 leading-relaxed font-medium">{p.about_me_notes || 'No active support records populated inside metadata container rows.'}</p>
+                              <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Operational Care Notes</span>
+                              <p className="text-gray-600 leading-relaxed font-medium">{p.about_me_notes || 'No active support records attached.'}</p>
                             </div>
                           </div>
                         )}
@@ -834,7 +761,6 @@ export default function LifeUnboundPortal() {
               </div>
             )}
 
-            {/* TAB 5: AVAILABILITIES STACKED WEEKEND UPGRADE MODULE (Item 6 requested modifications) */}
             {currentTab === 'availability' && (
               <div className="space-y-6">
                 <div className="border-b border-gray-200 pb-4">
@@ -864,9 +790,9 @@ export default function LifeUnboundPortal() {
 
                           {state.mode === 'standard' && (
                             <div className="flex items-center space-x-2">
-                              <input type="time" value={state.start} onChange={(e) => updateAvailabilityTimes(day, 'start', e.target.value)} className="bg-gray-50 border border-gray-300 rounded p-1 text-xs outline-none focus:border-blue-500" />
+                              <input type="time" value={state.start} onChange={(e) => updateAvailabilityTimes(day, 'start', e.target.value)} className="bg-gray-50 border border-gray-300 rounded p-1 text-xs outline-none" />
                               <span className="text-[10px] text-gray-400 font-bold">TO</span>
-                              <input type="time" value={state.end} onChange={(e) => updateAvailabilityTimes(day, 'end', e.target.value)} className="bg-gray-50 border border-gray-300 rounded p-1 text-xs outline-none focus:border-blue-500" />
+                              <input type="time" value={state.end} onChange={(e) => updateAvailabilityTimes(day, 'end', e.target.value)} className="bg-gray-50 border border-gray-300 rounded p-1 text-xs outline-none" />
                             </div>
                           )}
                           {state.mode === 'allday' && <span className="text-[9px] font-bold tracking-wide text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 uppercase">Available Full 24h</span>}
@@ -875,14 +801,11 @@ export default function LifeUnboundPortal() {
                       );
                     })}
                   </div>
-                  <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase py-3 rounded shadow transition-all transform active:scale-95">
-                    Submit Entire Fortnight Availabilities Block
-                  </button>
+                  <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase py-3 rounded shadow transition-all transform active:scale-95">Submit Entire Fortnight Availabilities Block</button>
                 </form>
               </div>
             )}
 
-            {/* TAB 6: FORTNIGHTLY COMPREHENSIVE TIMESHEET REMITTANCE MODULE (Item 7 requested modifications) */}
             {currentTab === 'timesheets' && (
               <div className="space-y-6">
                 <div className="border-b border-gray-200 pb-4">
@@ -891,11 +814,9 @@ export default function LifeUnboundPortal() {
                 </div>
 
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                  
-                  {/* Master Stacked Form Module View component */}
                   <div className="bg-white border border-gray-200 rounded-xl p-6 xl:col-span-2 space-y-4 shadow-sm h-fit">
                     <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium leading-relaxed text-gray-600">
-                      Instructions: Select your reporting pay range dropdown key code. Fill out details for each day worked. Click **"Add Shift Row to Fortnight Stack"** to dynamically chain entries all at once before pushing the irreversible production submission ledger at the base.
+                      Instructions: Select your reporting pay range dropdown. Fill out details for each day worked. Click "Add Shift Row to Fortnight Stack" to dynamically chain entries all at once before pushing the irreversible production submission ledger at the base.
                     </div>
 
                     <form onSubmit={handleStackedTimesheetSubmit} className="space-y-4">
@@ -906,7 +827,6 @@ export default function LifeUnboundPortal() {
                         </select>
                       </div>
 
-                      {/* Stack rows input loop matrix canvas grid items */}
                       <div className="space-y-3">
                         {timesheetRows.map((row, idx) => (
                           <div key={idx} className="p-4 bg-gray-50 border border-gray-200 rounded-lg grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -942,33 +862,26 @@ export default function LifeUnboundPortal() {
                               </div>
                             </div>
                             <div className="sm:col-span-2 lg:col-span-4">
-                              <label className="block text-[8px] font-bold text-gray-400 uppercase mb-1">Shift Progression Summary Narrative notes</label>
-                              <input type="text" required placeholder="Log specific objectives reached, outings completed, medication notes..." value={row.notes} onChange={(e) => updateTimesheetRowValue(idx, 'notes', e.target.value)} className="w-full bg-white border border-gray-300 rounded p-1.5 text-xs outline-none focus:border-blue-500" />
+                              <label className="block text-[8px] font-bold text-gray-400 uppercase mb-1">Shift Progression Summary Notes</label>
+                              <input type="text" required placeholder="Log specific objectives reached, outings completed..." value={row.notes} onChange={(e) => updateTimesheetRowValue(idx, 'notes', e.target.value)} className="w-full bg-white border border-gray-300 rounded p-1.5 text-xs outline-none" />
                             </div>
                           </div>
                         ))}
                       </div>
 
-                      <button type="button" onClick={addTimesheetRow} className="bg-white hover:bg-gray-100 text-gray-700 font-bold border border-gray-300 text-[10px] uppercase px-4 py-2 rounded transition-colors">
-                        Add Shift Row to Fortnight Stack
-                      </button>
+                      <button type="button" onClick={addTimesheetRow} className="bg-white hover:bg-gray-100 text-gray-700 font-bold border border-gray-300 text-[10px] uppercase px-4 py-2 rounded transition-colors">Add Shift Row to Fortnight Stack</button>
 
                       <div className="flex items-start space-x-3 bg-gray-50 p-4 rounded-lg border border-gray-200">
                         <input type="checkbox" required id="notesCheck" checked={tsNotesChecked} onChange={(e) => setTsNotesChecked(e.target.checked)} className="w-4 h-4 mt-0.5 border-gray-300 rounded accent-blue-600" />
-                        <label htmlFor="notesCheck" className="text-[11px] text-gray-500 font-medium select-none">I explicitly verify and assert that my corresponding client shift progression logs and case notes have been completely filled and filed.</label>
+                        <label htmlFor="notesCheck" className="text-[11px] text-gray-500 font-medium select-none">I verify that my shift case notes have been officially logged and filed.</label>
                       </div>
 
-                      <div className="p-3 bg-red-50 border border-red-100 text-[9px] font-bold uppercase tracking-wide text-red-600 rounded-lg">
-                        Notice: Once a fortnightly timesheet submission bundle is committed, entries lock securely and values cannot be changed or edited.
-                      </div>
+                      <div className="p-3 bg-red-50 border border-red-100 text-[9px] font-bold uppercase tracking-wide text-red-600 rounded-lg">Notice: Once submitted, entries lock securely and cannot be changed or edited.</div>
 
-                      <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase py-3 rounded shadow transition-all transform active:scale-95">
-                        Transmit Fortnightly Timesheet Remittance Package
-                      </button>
+                      <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase py-3 rounded shadow transition-all transform active:scale-95">Transmit Fortnightly Timesheet Remittance Package</button>
                     </form>
                   </div>
 
-                  {/* Filer Personal History Monitor Sidebar Box widget */}
                   <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm h-fit space-y-4">
                     <h3 className="text-xs font-bold text-blue-900 uppercase tracking-wide">Your Personal Remittance History</h3>
                     <div className="space-y-2">

@@ -128,7 +128,7 @@ export default function LifeUnboundPortal() {
         showToast('No user profile found matching that email.', 'error');
       } else if (data.password_mock === loginPassword.trim()) {
         setUser(data);
-        showToast(`Welcome back.`, 'success');
+        showToast('Welcome back.', 'success');
         setCurrentTab('dashboard');
       } else {
         showToast('Invalid access password.', 'error');
@@ -273,7 +273,7 @@ export default function LifeUnboundPortal() {
     };
 
     setTimesheetHistory([masterLogBlock, ...timesheetHistory]);
-    showToast(`Fortnightly timesheet packet filed securely!`, 'success');
+    showToast('Fortnightly timesheet packet filed securely!', 'success');
     setTimesheetRows([{ date: '', start: '', end: '', client: '', kmWith: '0', kmWithout: '0', notes: '' }]);
     setTsNotesChecked(false);
   };
@@ -305,7 +305,7 @@ export default function LifeUnboundPortal() {
     const newHistory = [submissionItem, ...availabilitySubmissions];
     setAvailabilitySubmissions(newHistory);
     await supabase.from('profiles').update({ notes: JSON.stringify(newHistory) }).eq('id', user.id);
-    showToast(`Fortnightly availabilities synchronized successfully!`, 'success');
+    showToast('Fortnightly availabilities synchronized successfully!', 'success');
   };
 
   const getWorkerIndexColor = (id: string) => {
@@ -329,7 +329,7 @@ export default function LifeUnboundPortal() {
           <div className="w-12 h-12 relative flex items-center justify-center rounded-xl bg-slate-950 border border-slate-800 p-1 shadow-inner">
             <img 
               src="/logo.png" 
-              alt="LU Logo" 
+              alt={"LU Logo"} 
               className="max-h-full max-w-full object-contain rounded-lg"
               onError={(e)=>{ (e.target as HTMLImageElement).src = 'https://wgtcvmyofcoikynyftwn.supabase.co/storage/v1/object/public/assets/logo-fallback.png'; }}
             />
@@ -405,7 +405,6 @@ export default function LifeUnboundPortal() {
 
         <main className="flex-1 p-6 sm:p-8 overflow-y-auto w-full mx-auto max-w-7xl">
           
-          {/* TOAST NOTIFICATIONS */}
           {notification && (
             <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 max-w-sm w-full px-4">
               <div className={`p-4 rounded-xl border text-xs font-bold shadow-2xl flex items-center space-x-2 bg-slate-900 ${notification.type === 'success' ? 'border-sky-500 text-sky-400' : 'border-rose-500 text-rose-400'}`}>
@@ -414,7 +413,6 @@ export default function LifeUnboundPortal() {
             </div>
           )}
 
-          {/* LOGIN SPLASH */}
           {!user && (
             <div className="max-w-md mx-auto my-12 bg-slate-900 border border-slate-800 shadow-2xl rounded-2xl p-8 space-y-6">
               <div className="text-center space-y-1">
@@ -443,11 +441,9 @@ export default function LifeUnboundPortal() {
             </div>
           )}
 
-          {/* SYSTEM DASH INTERFACES */}
           {user && (
             <div className="space-y-6">
               
-              {/* TAB 1: DASHBOARDS */}
               {currentTab === 'dashboard' && (
                 <div className="space-y-6">
                   <div className="border-b border-slate-800 pb-4">
@@ -508,7 +504,6 @@ export default function LifeUnboundPortal() {
                 </div>
               )}
 
-              {/* PAGE 2: ADMIN CENTRE */}
               {currentTab === 'director' && user.role === 'director' && (
                 <div className="space-y-6">
                   <div className="border-b border-slate-800 pb-4">
@@ -614,4 +609,309 @@ export default function LifeUnboundPortal() {
                           <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Strategic Care Notes & Support Parameters</label>
                           <textarea 
                             value={partNotes} onChange={(e) => setPartNotes(e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-800
+                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs text-slate-200 focus:outline-none focus:border-sky-500 h-16 resize-none"
+                            placeholder="Detail triggers, goal structures, communication keys..."
+                          />
+                        </div>
+                        <button type="submit" className="sm:col-span-2 bg-slate-950 border border-slate-800 text-slate-300 hover:text-slate-100 hover:border-slate-700 font-bold text-xs uppercase tracking-wider py-2.5 rounded-xl transition-all transform active:scale-95">
+                          Commit Participant Card to Cloud Registry
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {currentTab === 'rosters' && (
+                <div className="space-y-6">
+                  <div className="border-b border-slate-800 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                      <h2 className="text-lg font-black uppercase tracking-wide">Calendar</h2>
+                      <p className="text-xs text-slate-400">Isolate workflows via dropdown tracks, track unallocated slots highlighted in red, and deploy new shifts inline.</p>
+                    </div>
+                    <div className="bg-slate-900 border border-slate-800 p-1 rounded-xl flex space-x-1">
+                      {['day', 'week', 'month'].map(v => (
+                        <button 
+                          key={v} onClick={() => setCalendarView(v)}
+                          className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${calendarView === v ? 'bg-sky-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+                        >
+                          {v}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 shadow-xl">
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Calendar Category Dropdown</label>
+                      <select 
+                        value={calendarScope} 
+                        onChange={(e) => { setCalendarScope(e.target.value); setSelectedCalendarTargetId(''); }}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-sky-500"
+                      >
+                        <option value="combined">🌐 Combined Calendar (Full Matrix View)</option>
+                        <option value="admin">💼 Admin Calendar (Internal Operations)</option>
+                        <option value="worker">🧑‍💼 Staff Calendars (Isolate Employee)</option>
+                        <option value="participant">👥 Participant Calendars (Isolate Client)</option>
+                      </select>
+                    </div>
+
+                    {calendarScope === 'worker' && (
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Select Employee Profile</label>
+                        <select 
+                          value={selectedCalendarTargetId} onChange={(e) => setSelectedCalendarTargetId(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-sky-400 focus:outline-none focus:border-sky-500 font-bold"
+                        >
+                          <option value="">-- Choose Staff Member --</option>
+                          {workerList.map(w => (
+                            <option key={w.id} value={w.id}>{w.full_name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {calendarScope === 'participant' && (
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Select Participant Profile</label>
+                        <select 
+                          value={selectedCalendarTargetId} onChange={(e) => setSelectedCalendarTargetId(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-emerald-400 focus:outline-none focus:border-sky-500 font-bold"
+                        >
+                          <option value="">-- Choose Client Profile --</option>
+                          {participants.map(p => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
+                  {user.role === 'director' && (
+                    <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl space-y-3">
+                      <h4 className="text-xs font-black tracking-widest text-sky-400 uppercase">➕ Quick Allocate New Shift Inline</h4>
+                      <form onSubmit={handleCreateShift} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                        <input type="text" required placeholder="Activity Summary" value={shiftTitle} onChange={(e) => setShiftTitle(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs focus:border-sky-500 outline-none" />
+                        <select value={shiftWorkerId} onChange={(e) => setShiftWorkerId(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs focus:border-sky-500 outline-none">
+                          <option value="">Unclaimed Roster</option>
+                          {workerList.map(w => <option key={w.id} value={w.id}>{w.full_name}</option>)}
+                        </select>
+                        <select value={shiftParticipantId} onChange={(e) => setShiftParticipantId(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs focus:border-sky-500 outline-none">
+                          <option value="">Corporate Admin</option>
+                          {participants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                        <input type="date" required value={shiftDate} onChange={(e) => setShiftDate(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs focus:border-sky-500 outline-none" />
+                        <input type="time" required value={shiftStart} onChange={(e) => setShiftStart(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs focus:border-sky-500 outline-none" />
+                        <input type="time" required value={shiftEnd} onChange={(e) => setShiftEnd(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs focus:border-sky-500 outline-none" />
+                        <div className="sm:col-span-2 md:col-span-3 lg:col-span-5">
+                          <input type="text" placeholder="Manager Shift Directive Reminders..." value={shiftDirectives} onChange={(e) => setShiftDirectives(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs focus:border-sky-500 outline-none" />
+                        </div>
+                        <button type="submit" className="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs uppercase rounded-xl tracking-wider py-2 transition-all shadow-md transform active:scale-95">Deploy</button>
+                      </form>
+                    </div>
+                  )}
+
+                  <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
+                    <div className="p-4 sm:p-6 space-y-3">
+                      {shifts
+                        .filter(s => {
+                          if (calendarScope === 'admin') return !s.participant_id;
+                          if (calendarScope === 'worker' && selectedCalendarTargetId) return s.staff_id === selectedCalendarTargetId;
+                          if (calendarScope === 'participant' && selectedCalendarTargetId) return s.participant_id === selectedCalendarTargetId;
+                          return true;
+                        })
+                        .map(s => {
+                          const isUnclaimed = !s.staff_id || s.status === 'available';
+                          const workerMapDetails = profiles.find(p => p.id === s.staff_id);
+                          const clientMapDetails = participants.find(p => p.id === s.participant_id);
+                          
+                          const colorThemeClass = isUnclaimed 
+                            ? 'border-rose-500 bg-rose-950/10 text-rose-400 shadow shadow-rose-950/20' 
+                            : s.participant_id 
+                              ? getClientIndexColor(s.participant_id) 
+                              : getWorkerIndexColor(s.staff_id);
+
+                          return (
+                            <div key={s.id} className={`border rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 transition-all ${colorThemeClass}`}>
+                              <div className="space-y-1">
+                                <div className="flex items-center space-x-2">
+                                  <span className={`w-2 h-2 rounded-full ${isUnclaimed ? 'bg-rose-500 animate-pulse' : 'bg-current'}`} />
+                                  <h4 className="font-bold text-sm uppercase tracking-wide text-slate-100">{s.title}</h4>
+                                  {isUnclaimed && <span className="text-[9px] font-black tracking-widest bg-rose-500 text-slate-950 px-2 py-0.5 rounded uppercase">Unassigned</span>}
+                                </div>
+                                <p className="text-[11px] opacity-90 font-mono">
+                                  📅 {new Date(s.start_time).toLocaleDateString('en-AU')} | ⏱️ {new Date(s.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {new Date(s.end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                </p>
+                                <div className="flex flex-wrap gap-2 text-[10px] pt-1">
+                                  <span>Staff: <strong>{workerMapDetails ? workerMapDetails.full_name : 'None Assigned'}</strong></span>
+                                  <span>Participant: <strong>{clientMapDetails ? clientMapDetails.name : 'Corporate Admin'}</strong></span>
+                                </div>
+                                {s.manager_directives && <p className="mt-2 bg-slate-950/40 p-2 rounded text-xs italic border-l border-slate-700 text-slate-300">💡 Instruction: {s.manager_directives}</p>}
+                              </div>
+                              {isUnclaimed && user.role === 'support_worker' && (
+                                <button onClick={() => handleClaimUnclaimedShift(s.id)} className="bg-rose-600 hover:bg-rose-500 text-slate-950 font-black text-xs uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all transform active:scale-95 shadow">Claim</button>
+                              )}
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {currentTab === 'profiles' && (
+                <div className="space-y-6">
+                  <div className="border-b border-slate-800 pb-4">
+                    <h2 className="text-lg font-black uppercase tracking-wide">Participant Profiles</h2>
+                    <p className="text-xs text-slate-400">Review critical compliance dockets and behavior support frameworks.</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    {participants.map(p => {
+                      const isItemOpen = expandedClient === p.id;
+                      return (
+                        <div key={p.id} className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl transition-all">
+                          <div onClick={() => setExpandedClient(isItemOpen ? null : p.id)} className="p-5 flex items-center justify-between cursor-pointer hover:bg-slate-850/60 transition-all select-none">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-2.5 h-2.5 rounded-full bg-sky-400" />
+                              <h3 className="font-black text-xs uppercase tracking-wider text-slate-200">{p.name}</h3>
+                            </div>
+                            <span className="text-sm font-bold text-sky-400">{isItemOpen ? '▲' : '▼'}</span>
+                          </div>
+
+                          {isItemOpen && (
+                            <div className="p-6 bg-slate-950/60 border-t border-slate-850 space-y-5">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                <div className="bg-slate-950 p-4 rounded-xl border border-slate-850">
+                                  <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Primary Telephone Contact</span>
+                                  <p className="text-xs font-mono font-bold text-slate-200">{p.primary_contact_phone || 'Unlisted/Null'}</p>
+                                </div>
+                                <div className="bg-slate-950 p-4 rounded-xl border border-slate-850">
+                                  <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">NDIS Identity Key Code</span>
+                                  <p className="text-xs font-mono font-bold text-slate-200">{p.ndis_number || 'Unlisted/Null'}</p>
+                                </div>
+                                <div className="bg-slate-950 p-4 rounded-xl border border-slate-850">
+                                  <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Emergency Representative Liaison</span>
+                                  <p className="text-xs font-bold text-slate-200 uppercase">{p.emergency_contact_name || 'Not Logged'}</p>
+                                  <span className="text-[11px] font-mono text-sky-400">{p.emergency_contact_phone || ''}</span>
+                                </div>
+                              </div>
+                              <div className="bg-slate-950 p-4 rounded-xl border border-slate-850 space-y-1">
+                                <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Care Directives Summary notes</span>
+                                <p className="text-xs text-slate-300 font-medium leading-relaxed">{p.about_me_notes || 'No notes attached.'}</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {currentTab === 'availability' && (
+                <div className="space-y-6">
+                  <div className="border-b border-slate-800 pb-4">
+                    <h2 className="text-lg font-black uppercase tracking-wide">Availabilities</h2>
+                    <p className="text-xs text-slate-400">Lock and update your complete fortnightly scheduling parameters all at once.</p>
+                  </div>
+                  <form onSubmit={handleStackedAvailabilitySubmit} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6 shadow-2xl">
+                    <div className="max-w-xs">
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Target Payroll Fortnight Cycle</label>
+                      <select value={availFortnight} onChange={(e) => setAvailFortnight(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-sky-400 font-bold outline-none">
+                        {fortnights.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                      </select>
+                    </div>
+                    <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-950 divide-y divide-slate-850">
+                      {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => {
+                        const state = availDaysState[day];
+                        return (
+                          <div key={day} className="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-slate-900/40 hover:bg-slate-900/70 transition-all">
+                            <span className="text-xs font-black uppercase tracking-wider text-slate-300 w-28">{day}</span>
+                            <div className="flex flex-wrap gap-3 items-center">
+                              {['standard', 'allday', 'unavailable'].map(m => (
+                                <button key={m} type="button" onClick={() => updateAvailabilityMode(day, m as any)} className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-all ${state.mode === m ? 'bg-sky-500/10 border-sky-500 text-sky-400' : 'bg-slate-950 border-slate-800 text-slate-500'}`}>{m === 'standard' ? 'Specific Hours' : m === 'allday' ? 'All Day Available' : 'Unavailable'}</button>
+                              ))}
+                            </div>
+                            {state.mode === 'standard' && (
+                              <div className="flex items-center space-x-2">
+                                <input type="time" value={state.start} onChange={(e) => updateAvailabilityTimes(day, 'start', e.target.value)} className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-200 outline-none" />
+                                <span className="text-xs text-slate-500 font-mono">TO</span>
+                                <input type="time" value={state.end} onChange={(e) => updateAvailabilityTimes(day, 'end', e.target.value)} className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-200 outline-none" />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <button type="submit" className="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs uppercase py-3.5 rounded-xl shadow-md transition-all transform active:scale-95">Submit Availabilities Block</button>
+                  </form>
+                </div>
+              )}
+
+              {currentTab === 'timesheets' && (
+                <div className="space-y-6">
+                  <div className="border-b border-slate-800 pb-4">
+                    <h2 className="text-lg font-black uppercase tracking-wide">Timesheet Submissions</h2>
+                    <p className="text-xs text-slate-400">File stacked hour structures at the end of your fortnight period for compliance remittance mapping.</p>
+                  </div>
+                  <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 xl:col-span-2 space-y-4 shadow-xl">
+                      <form onSubmit={handleStackedTimesheetSubmit} className="space-y-4">
+                        <div className="max-w-xs">
+                          <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Payroll Fortnight Range</label>
+                          <select value={selectedFortnight} onChange={(e) => setSelectedFortnight(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-sky-400 font-bold outline-none">
+                            {fortnights.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                          </select>
+                        </div>
+                        <div className="space-y-3">
+                          {timesheetRows.map((row, idx) => (
+                            <div key={idx} className="p-4 bg-slate-950 border border-slate-850 rounded-xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                              <input type="date" required value={row.date} onChange={(e) => updateTimesheetRowValue(idx, 'date', e.target.value)} className="bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 outline-none" />
+                              <div className="grid grid-cols-2 gap-1">
+                                <input type="time" required value={row.start} onChange={(e) => updateTimesheetRowValue(idx, 'start', e.target.value)} className="bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 outline-none" />
+                                <input type="time" required value={row.end} onChange={(e) => updateTimesheetRowValue(idx, 'end', e.target.value)} className="bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 outline-none" />
+                              </div>
+                              <select required value={row.client} onChange={(e) => updateTimesheetRowValue(idx, 'client', e.target.value)} className="bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-400 outline-none">
+                                <option value="">-- Choose Participant --</option>
+                                {participants.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                              </select>
+                              <div className="grid grid-cols-2 gap-1">
+                                <input type="number" placeholder="KM Client" value={row.kmWith} onChange={(e) => updateTimesheetRowValue(idx, 'kmWith', e.target.value)} className="bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 outline-none" />
+                                <input type="number" placeholder="KM Car" value={row.kmWithout} onChange={(e) => updateTimesheetRowValue(idx, 'kmWithout', e.target.value)} className="bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 outline-none" />
+                              </div>
+                              <input type="text" required placeholder="Shift note description metrics..." value={row.notes} onChange={(e) => updateTimesheetRowValue(idx, 'notes', e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 sm:col-span-2 lg:col-span-4 outline-none" />
+                            </div>
+                          ))}
+                        </div>
+                        <button type="button" onClick={addTimesheetRow} className="bg-slate-950 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700 text-[10px] font-black uppercase tracking-wider px-4 py-2.5 rounded-xl">➕ Add Shift Row to Fortnight Stack</button>
+                        <div className="flex items-start space-x-3 bg-slate-950 p-4 rounded-xl border border-slate-850">
+                          <input type="checkbox" required id="notesCheck" checked={tsNotesChecked} onChange={(e) => setTsNotesChecked(e.target.checked)} className="w-4 h-4 mt-0.5 bg-slate-900 border border-slate-800 rounded accent-sky-500" />
+                          <label htmlFor="notesCheck" className="text-[11px] text-slate-400 font-medium">I verify that my comprehensive shift case notes have been officially logged and filed across client management streams.</label>
+                        </div>
+                        <button type="submit" className="w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-slate-950 font-black text-xs uppercase py-3.5 rounded-xl shadow-md transition-all transform active:scale-95">Transmit Fortnight Timesheet Remittance Package</button>
+                      </form>
+                    </div>
+                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 h-fit shadow-xl">
+                      <h3 className="text-xs font-black tracking-widest text-slate-400 uppercase">Remittance History Log</h3>
+                      <div className="space-y-2">
+                        {timesheetHistory.map(ts => (
+                          <div key={ts.id} className="bg-slate-950 p-4 rounded-xl border border-slate-850 text-xs">
+                            <span className="font-mono text-sky-400 font-bold text-[10px] block border-b border-slate-850 pb-1 mb-1">REFPACK: #{ts.id}</span>
+                            <p className="font-bold text-slate-200">{ts.fortnightLabel}</p>
+                            <p className="text-slate-400 text-[11px]">Logged Volume: {ts.rowsCount} Days worked (~{ts.totalHours}h)</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </div>
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}

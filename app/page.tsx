@@ -36,7 +36,7 @@ export default function LifeUnboundPortal() {
   const [fortnights, setFortnights] = useState<any[]>([]);
   const [selectedFortnight, setSelectedFortnight] = useState('');
 
-  // Form Input Buffers: Onboard Worker
+  // Form Input Buffers: Onboard Support Worker
   const [workerName, setWorkerName] = useState('');
   const [workerEmail, setWorkerEmail] = useState('');
   const [workerPhone, setWorkerPhone] = useState('');
@@ -557,7 +557,7 @@ export default function LifeUnboundPortal() {
                             <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Contact Phone Number</label>
                             <input 
                               type="text" required value={workerPhone} onChange={(e) => setWorkerPhone(e.target.value)}
-                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500"
+                              className="w-full bg-slate-955 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500"
                               placeholder="0412 345 678"
                             />
                           </div>
@@ -584,5 +584,4 @@ export default function LifeUnboundPortal() {
                       )}
                     </div>
 
-                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
-                      <h3 className="text-xs font-black tracking-widest text-sky-40
+                    <div className="bg-slate-900 border border-slate-800 rounded-2xl

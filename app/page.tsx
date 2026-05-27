@@ -353,9 +353,9 @@ export default function LifeUnboundPortal() {
     setAvailDaysState(updated);
   };
 
-  const updateAvailabilityTimes = (day: string, field: 'start' | 'end', textVal: string) => {
+  const updateAvailabilityTimes = (day: string, field: 'start' | 'end', val: string) => {
     const updated = { ...availDaysState };
-    updated[day][field] = textVal;
+    updated[day][field] = val;
     setAvailDaysState(updated);
   };
 
@@ -673,7 +673,7 @@ export default function LifeUnboundPortal() {
                         <input type="text" placeholder="Manager Directives / Reminders..." value={shiftDirectives} onChange={(e) => setShiftDirectives(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg p-2 text-xs text-gray-800 outline-none" />
                       </div>
                       <div className="lg:col-span-2 flex items-end">
-                        <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase rounded-lg py-2.5 shadow transition-transform transform active:scale-95 shadow">Deploy Event Rows</button>
+                        <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase py-2.5 rounded-lg transition-transform transform active:scale-95 shadow">Deploy Event Rows</button>
                       </div>
                     </form>
                   </div>
@@ -681,9 +681,9 @@ export default function LifeUnboundPortal() {
 
                 <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
                   <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex items-center justify-between shadow-sm select-none">
-                    <button onClick={() => setCurrentCalendarOffset(currentCalendarOffset - 1)} className="bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs">← Previous</button>
+                    <button onClick={() => setCurrentCalendarOffset(currentCalendarOffset - 1)} className="bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs uppercase">← Previous</button>
                     <span className="text-xs font-black uppercase text-blue-900 tracking-widest font-mono bg-white border border-slate-200 px-4 py-1.5 rounded-xl shadow-inner">{getDynamicCalendarHeaderString()}</span>
-                    <button onClick={() => setCurrentCalendarOffset(currentCalendarOffset + 1)} className="bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs">Next →</button>
+                    <button onClick={() => setCurrentCalendarOffset(currentCalendarOffset + 1)} className="bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs uppercase">Next →</button>
                   </div>
 
                   {calendarView === 'month' && (

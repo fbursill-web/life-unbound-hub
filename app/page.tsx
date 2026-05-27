@@ -8,7 +8,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publish
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function LifeUnboundPortal() {
-  // Session Configuration & Portal View Routers
+  // Portal Entry & Session States
   const [portalType, setPortalType] = useState<null | 'staff' | 'admin'>(null);
   const [user, setUser] = useState<any>(null);
   const [loginEmail, setLoginEmail] = useState('');
@@ -24,7 +24,7 @@ export default function LifeUnboundPortal() {
   const [timesheetHistory, setTimesheetHistory] = useState<any[]>([]);
   const [availabilitySubmissions, setAvailabilitySubmissions] = useState<any[]>([]);
 
-  // Expandable Interface Flags
+  // UI Interactive States
   const [expandedClient, setExpandedClient] = useState<string | null>(null);
   const [calendarScope, setCalendarScope] = useState('combined'); 
   const [selectedCalendarTargetId, setSelectedCalendarTargetId] = useState('');
@@ -52,7 +52,7 @@ export default function LifeUnboundPortal() {
   // Multi-Use Calendar Inputs
   const [eventCategory, setEventCategory] = useState('shift'); 
   const [shiftTitle, setShiftTitle] = useState('');
-  const [allocationType, setAllocationType] = useState('available'); // 'available', 'admin', 'staff', 'participant'
+  const [allocationType, setAllocationType] = useState('available'); 
   const [selectedWorkerIds, setSelectedWorkerIds] = useState<string[]>([]);
   const [selectedParticipantIds, setSelectedParticipantIds] = useState<string[]>([]);
   const [shiftDate, setShiftDate] = useState('');
@@ -117,7 +117,7 @@ export default function LifeUnboundPortal() {
       const { data: sfts } = await supabase.from('shifts').select('*');
       if (sfts) setShifts(sfts);
     } catch (err) {
-      console.error('Core sync error:', err);
+      console.error('Data sync error:', err);
     }
   };
 
@@ -135,7 +135,7 @@ export default function LifeUnboundPortal() {
         showToast('No user profile found matching that email.', 'error');
       } else if (data.password_mock === loginPassword.trim()) {
         if (portalType === 'admin' && data.role !== 'director') {
-          showToast('Access denied. Administrator privileges required.', 'error');
+          showToast('Access denied. Administrative privileges required.', 'error');
           setLoading(false);
           return;
         }
@@ -143,10 +143,10 @@ export default function LifeUnboundPortal() {
         showToast('Authentication successful.', 'success');
         setCurrentTab('dashboard');
       } else {
-        showToast('Invalid access password configuration.', 'error');
+        showToast('Invalid access credentials.', 'error');
       }
     } catch (err) {
-      showToast('Handshake rejected. Verify connection keys.', 'error');
+      showToast('Connection handshake rejected.', 'error');
     } finally {
       setLoading(false);
     }
@@ -168,7 +168,7 @@ export default function LifeUnboundPortal() {
       ]);
       if (error) throw error;
       setGeneratedPassword(securePasswordTemplate);
-      showToast(`Account for ${workerName} initialized safely.`, 'success');
+      showToast('Support worker account initialized safely.', 'success');
       setWorkerName('');
       setWorkerEmail('');
       setWorkerPhone('');
@@ -193,7 +193,7 @@ export default function LifeUnboundPortal() {
         }
       ]);
       if (error) throw error;
-      showToast('Participant profile synchronized cleanly to registry.', 'success');
+      showToast('Participant registered successfully.', 'success');
       setPartName('');
       setPartNdis('');
       setPartPhone('');
@@ -206,7 +206,6 @@ export default function LifeUnboundPortal() {
     }
   };
 
-  // ADVANCED MULTI-TARGET ASSIGNMENT DISTRIBUTOR ENGINE
   const handleCreateShift = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -215,17 +214,13 @@ export default function LifeUnboundPortal() {
       const titlePrefix = eventCategory === 'event' ? '[EVENT] ' : '';
       const finalTitle = titlePrefix + (shiftTitle.trim() || 'Roster Item');
 
-      // Compile arrays into single insertion loops or comma fields to route onto multiple timelines dynamically
-      const targetWorkers = allocationType === 'staff' ? selectedWorkerIds : [null];
-      const targetClients = allocationType === 'participant' ? selectedParticipantIds : [null];
-
       let insertionRows: any[] = [];
 
       if (allocationType === 'available') {
         insertionRows.push({
           title: finalTitle,
           staff_id: null,
-          participant_id: shiftParticipantId || null,
+          participant_id: null,
           start_time: startIso,
           end_time: endIso,
           manager_directives: shiftDirectives.trim(),
@@ -234,7 +229,7 @@ export default function LifeUnboundPortal() {
       } else if (allocationType === 'admin') {
         insertionRows.push({
           title: finalTitle,
-          staff_id: shiftWorkerId || null,
+          staff_id: null,
           participant_id: null,
           start_time: startIso,
           end_time: endIso,
@@ -242,7 +237,6 @@ export default function LifeUnboundPortal() {
           status: 'scheduled'
         });
       } else {
-        // Cross-multiply allocations to link multiple staff and participants onto crosswise stream views
         const workersToLoop = selectedWorkerIds.length > 0 ? selectedWorkerIds : [null];
         const clientsToLoop = selectedParticipantIds.length > 0 ? selectedParticipantIds : [null];
 
@@ -264,7 +258,7 @@ export default function LifeUnboundPortal() {
       const { error } = await supabase.from('shifts').insert(insertionRows);
       if (error) throw error;
       
-      showToast(`Successfully published ${insertionRows.length} items across targeted streams.`, 'success');
+      showToast(`Successfully published ${insertionRows.length} items.`, 'success');
       setShiftTitle('');
       setShiftDirectives('');
       setShiftDate('');
@@ -274,7 +268,7 @@ export default function LifeUnboundPortal() {
       setSelectedParticipantIds([]);
       fetchCoreData();
     } catch (err: any) {
-      showToast(err.message || 'Database rejected multi-target layout compilation.', 'error');
+      showToast(err.message || 'Database rejected layout compilation.', 'error');
     }
   };
 
@@ -404,7 +398,6 @@ export default function LifeUnboundPortal() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col antialiased font-sans selection:bg-blue-500/20">
       
-      {/* Light Clean Navigation Bar */}
       <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center space-x-4">
           <div className="w-12 h-12 relative flex items-center justify-center rounded-xl border border-slate-200 p-1 bg-white shadow-inner">
@@ -438,7 +431,6 @@ export default function LifeUnboundPortal() {
         </div>
       </header>
 
-      {/* Top Horizontal View Switch Tabs Bar Navigation */}
       {user && (
         <nav className="bg-white border-b border-slate-200 px-6 py-2 flex flex-wrap gap-1.5 shadow-sm">
           <button onClick={() => setCurrentTab('dashboard')} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${currentTab === 'dashboard' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'}`}>Dashboards</button>
@@ -453,7 +445,6 @@ export default function LifeUnboundPortal() {
         </nav>
       )}
 
-      {/* Main Workspace Frame App Canvas */}
       <main className="flex-1 p-5 sm:p-8 w-full mx-auto max-w-7xl">
         
         {notification && (
@@ -464,16 +455,15 @@ export default function LifeUnboundPortal() {
           </div>
         )}
 
-        {/* RESTORED CLEAR TEXT LOGIN LANDING GATE SELECTION MODULE (Item 1 Fix!) */}
         {!user && !portalType && (
           <div className="max-w-md mx-auto my-16 bg-white border border-slate-200 shadow-md rounded-xl p-8 space-y-5 text-center">
             <h1 className="text-sm font-black uppercase tracking-widest text-slate-400">Portal Entry Gateway</h1>
             <p className="text-xs text-slate-500 font-semibold">Please select your operational workspace module below to enter:</p>
             <div className="grid grid-cols-1 gap-3 pt-2">
-              <button onClick={() => setPortalType('staff')} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider py-4 rounded-xl shadow transition-transform transform active:scale-98">
+              <button onClick={() => setPortalType('staff')} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider py-4 rounded-xl shadow-md transition-all transform active:scale-98">
                 Open Staff Workspace Portal
               </button>
-              <button onClick={() => setPortalType('admin')} className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs uppercase tracking-wider py-4 rounded-xl shadow transition-transform transform active:scale-98">
+              <button onClick={() => setPortalType('admin')} className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs uppercase tracking-wider py-4 rounded-xl shadow-md transition-all transform active:scale-98">
                 Open Administrative Director Portal
               </button>
             </div>
@@ -495,7 +485,7 @@ export default function LifeUnboundPortal() {
               </div>
               <div>
                 <label className="block text-[9px] font-bold tracking-wider text-slate-500 uppercase mb-1">Security Access Password</label>
-                <input type="password" required placeholder="••••••••••••" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} className="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-blue-500" />
+                <input type="password" required placeholder="••••••••••••" value={loginPassword} onChange={(e) => checked => setLoginPassword(e.target.value)} className="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-blue-500" />
               </div>
               <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider py-3 rounded-lg shadow transition-all transform active:scale-95">Verify Account Signature</button>
             </form>
@@ -505,7 +495,6 @@ export default function LifeUnboundPortal() {
         {user && (
           <div className="space-y-6">
             
-            {/* TAB 1: DASHBOARDS */}
             {currentTab === 'dashboard' && (
               <div className="space-y-6">
                 <div className="border-b border-slate-200 pb-4">
@@ -521,7 +510,6 @@ export default function LifeUnboundPortal() {
                     </div>
                   </div>
 
-                  {/* CURRENT WEEK TIMELINE TRACKER COMPONENT (Requested layout addition!) */}
                   <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm lg:col-span-2 space-y-3">
                     <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide border-b border-slate-100 pb-1">Current Active Week Tracking Feed</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-7 gap-2">
@@ -548,7 +536,6 @@ export default function LifeUnboundPortal() {
               </div>
             )}
 
-            {/* TAB 2: ADMIN CENTRE */}
             {currentTab === 'director' && user.role === 'director' && (
               <div className="space-y-6">
                 <div className="border-b border-slate-200 pb-4">
@@ -604,7 +591,7 @@ export default function LifeUnboundPortal() {
               </div>
             )}
 
-            {/* PAGE 3: FULL GOOGLE CALENDAR LAYOUT ARCHITECTURE MODULE GRID (Month, Week, & Day Views) */}
+            {/* PAGE 3: CALENDAR VIEWPORTS CONTAINER */}
             {currentTab === 'rosters' && (
               <div className="space-y-6">
                 <div className="border-b border-slate-200 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -619,7 +606,6 @@ export default function LifeUnboundPortal() {
                   </div>
                 </div>
 
-                {/* ADVANCED ALLOCATION CHASSIS GRID (Item 3 & 5 re-engineered multi-target selection) */}
                 {user.role === 'director' && (
                   <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm space-y-4">
                     <div className="flex items-center space-x-1.5 bg-slate-50 p-1 rounded-lg border border-slate-200 w-fit">
@@ -645,18 +631,16 @@ export default function LifeUnboundPortal() {
                         <input type="time" required value={shiftEnd} onChange={(e) => setShiftEnd(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs outline-none" />
                       </div>
 
-                      {/* TRUE TARGET SELECTION TRACK TYPE FIELD LOGIC (Item 3 re-engineered) */}
                       <div className="lg:col-span-2 bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1">
                         <label className="block text-[9px] font-black uppercase text-slate-500 tracking-wider">Allocation Target Stream</label>
                         <select value={allocationType} onChange={(e)=>setAllocationType(e.target.value)} className="w-full bg-white border border-slate-200 rounded p-1 text-xs font-bold text-blue-600 outline-none">
                           <option value="available">Unassigned / Open Available (Red Alert block)</option>
                           <option value="admin">Corporate Administration Calendar Link</option>
-                          <option value="staff">Staff Scheduled Timeline (Multi-Select below)</option>
-                          <option value="participant">Participant Dedicated Timeline (Multi-Select below)</option>
+                          <option value="staff">Staff Scheduled Timeline</option>
+                          <option value="participant">Participant Dedicated Timeline</option>
                         </select>
                       </div>
 
-                      {/* DYNAMIC MULTI-SELECT CHECKBOX LIST TRACK CANVAS */}
                       <div className="lg:col-span-2 bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1">
                         <label className="block text-[9px] font-black uppercase text-slate-500 tracking-wider">Multi-Stream Routing Checkboxes</label>
                         
@@ -681,10 +665,6 @@ export default function LifeUnboundPortal() {
                             ))}
                           </div>
                         )}
-
-                        {allocationType !== 'staff' && allocationType !== 'participant' && (
-                          <span className="text-[10px] text-slate-400 italic block pt-1 leading-normal">System links automatically to target parameter categories selected left.</span>
-                        )}
                       </div>
 
                       <div className="lg:col-span-4">
@@ -697,38 +677,28 @@ export default function LifeUnboundPortal() {
                   </div>
                 )}
 
-                {/* THE GENUINE HIGH-FIDELITY VISUAL CALENDAR CHASSIS GRID (Month, Week, Day layouts requested updates) */}
                 <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                  
-                  {/* Pager control strip */}
                   <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex items-center justify-between shadow-sm select-none">
-                    <button onClick={() => setCurrentCalendarOffset(currentCalendarOffset - 1)} className="bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs uppercase transition-colors">← Previous</button>
+                    <button onClick={() => setCurrentCalendarOffset(currentCalendarOffset - 1)} className="bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs uppercase">← Previous</button>
                     <span className="text-xs font-black uppercase text-blue-900 tracking-widest font-mono bg-white border border-slate-200 px-4 py-1.5 rounded-xl shadow-inner">{getDynamicCalendarHeaderString()}</span>
-                    <button onClick={() => setCurrentCalendarOffset(currentCalendarOffset + 1)} className="bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs uppercase transition-colors">Next →</button>
+                    <button onClick={() => setCurrentCalendarOffset(currentCalendarOffset + 1)} className="bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs uppercase">Next →</button>
                   </div>
 
-                  {/* VISUAL MODULE 1: MONTH OVERVIEW GRID SYSTEM */}
                   {calendarView === 'month' && (
                     <div className="bg-white p-4 space-y-4">
-                      {/* Day Label headers */}
                       <div className="grid grid-cols-7 gap-2 text-center text-[10px] font-black uppercase text-slate-400 tracking-widest">
                         {calendarDaysOfWeek.map(d => <div key={d}>{d.substring(0,3)}</div>)}
                       </div>
-                      {/* Interactive Month Square blocks grid blueprint */}
                       <div className="grid grid-cols-7 gap-2 pt-1 border border-slate-100 rounded-xl p-2 bg-slate-50/20">
                         {Array.from({ length: 28 }).map((_, blockIdx) => {
                           const mockDayNumber = blockIdx + 1;
-                          // Collect entries matching this specific calendar slot calculation
                           const dayShifts = shifts.filter(s => new Date(s.start_time).getDate() === mockDayNumber);
-
                           return (
-                            <div key={blockIdx} className="bg-white border border-slate-200 p-2 rounded-xl min-h-[95px] flex flex-col justify-between hover:border-blue-400 transition-colors">
+                            <div key={blockIdx} className="bg-white border border-slate-200 p-2 rounded-xl min-h-[95px] flex flex-col justify-between">
                               <span className="block text-[10px] font-mono font-bold text-slate-400 text-right">{mockDayNumber}</span>
                               <div className="flex-1 space-y-1 pt-1 overflow-hidden">
                                 {dayShifts.slice(0,2).map(s => (
-                                  <div key={s.id} className={`text-[8px] font-extrabold p-0.5 rounded border truncate uppercase tracking-tight ${!s.staff_id ? 'bg-red-50 text-red-600 border-red-200' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
-                                    {s.title}
-                                  </div>
+                                  <div key={s.id} className="text-[8px] font-extrabold p-0.5 rounded border truncate uppercase tracking-tight bg-blue-50 text-blue-700 border-blue-100">{s.title}</div>
                                 ))}
                               </div>
                             </div>
@@ -738,7 +708,6 @@ export default function LifeUnboundPortal() {
                     </div>
                   )}
 
-                  {/* VISUAL MODULE 2: WEEK OVERVIEW COLUMNS BREAKDOWN BLUEPRINT */}
                   {calendarView === 'week' && (
                     <div className="bg-white p-4 grid grid-cols-7 gap-3 min-h-[220px]">
                       {calendarDaysOfWeek.map(dayName => {
@@ -748,9 +717,8 @@ export default function LifeUnboundPortal() {
                             <span className="block text-center font-black uppercase tracking-wider text-[10px] text-slate-400 border-b border-slate-200 pb-1.5">{dayName.substring(0,3)}</span>
                             <div className="space-y-1.5 flex-1 overflow-y-auto">
                               {dayShifts.map(s => (
-                                <div key={s.id} className={`p-2 rounded-lg border text-[9px] font-bold uppercase tracking-tight leading-snug shadow-sm ${!s.staff_id ? 'bg-red-50 text-red-600 border-red-300' : 'bg-white text-blue-900 border-blue-200'}`}>
+                                <div key={s.id} className="p-2 rounded-lg border text-[9px] font-bold uppercase tracking-tight bg-white text-blue-900 border-blue-200">
                                   <span className="block font-black text-blue-700 truncate">{s.title}</span>
-                                  <span className="block font-mono text-[8px] font-medium text-slate-400 pt-0.5">{new Date(s.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                                 </div>
                               ))}
                             </div>
@@ -760,34 +728,23 @@ export default function LifeUnboundPortal() {
                     </div>
                   )}
 
-                  {/* VISUAL MODULE 3: DAY VIEW ISOLATED HOURS SHEET TRACK */}
                   {calendarView === 'day' && (
-                    <div className="bg-white p-5 divide-y divide-slate-100 max-h-80 overflow-y-auto font-mono text-xs">
+                    <div className="bg-white p-5 divide-y divide-slate-100 max-h-80 overflow-y-auto">
                       {['09:00', '11:00', '13:00', '15:00', '17:00'].map(hourStamp => {
                         const hourShifts = shifts.filter(s => new Date(s.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) === hourStamp);
                         return (
-                          <div key={hourStamp} className="py-4 flex items-start gap-4">
-                            <span className="w-16 block font-bold text-blue-600 select-none text-right">{hourStamp}</span>
+                          <div key={hourStamp} className="py-4 flex items-start gap-4 text-xs">
+                            <span className="w-16 block font-bold text-blue-600 select-none text-right font-mono">{hourStamp}</span>
                             <div className="flex-1 space-y-1">
                               {hourShifts.map(s => (
-                                <div key={s.id} className={`p-3 rounded-xl border text-xs font-sans font-bold flex justify-between items-center ${!s.staff_id ? 'bg-red-50 border-red-300 text-red-700' : 'bg-blue-50/50 border-blue-200 text-blue-900'}`}>
-                                  <div>
-                                    <span className="block font-black uppercase tracking-wide">{s.title}</span>
-                                    {s.manager_directives && <p className="text-[11px] text-slate-400 italic pt-0.5 font-medium">Directive: "{s.manager_directives}"</p>}
-                                  </div>
-                                  {!s.staff_id && user.role === 'support_worker' && (
-                                    <button onClick={() => handleClaimUnclaimedShift(s.id)} className="bg-red-600 text-white text-[10px] uppercase font-bold px-3 py-1 rounded shadow">Claim Position</button>
-                                  )}
-                                </div>
+                                <div key={s.id} className="p-3 rounded-xl border bg-blue-50/50 border-blue-200 text-blue-900 font-bold">{s.title}</div>
                               ))}
-                              {hourShifts.length === 0 && <span className="text-slate-300 italic text-[11px] block pt-0.5">No schedule line entries assigned to this time parameter window</span>}
                             </div>
                           </div>
                         );
                       })}
                     </div>
                   )}
-
                 </div>
               </div>
             )}
@@ -797,7 +754,6 @@ export default function LifeUnboundPortal() {
               <div className="space-y-6">
                 <div className="border-b border-slate-200 pb-4">
                   <h2 className="text-base font-bold uppercase tracking-wider text-blue-900">Participant Profiles</h2>
-                  <p className="text-xs text-slate-400">Review critical compliance folders and emergency coordination files.</p>
                 </div>
                 <div className="space-y-2">
                   {participants.map(p => {
@@ -821,12 +777,11 @@ export default function LifeUnboundPortal() {
               </div>
             )}
 
-            {/* PAGE 5: FORTNIGHTLY AVAILABILITY WINDOWS MATRIX */}
+            {/* PAGE 5: AVAILABILITIES */}
             {currentTab === 'availability' && (
               <div className="space-y-6">
                 <div className="border-b border-slate-200 pb-4">
                   <h2 className="text-base font-bold uppercase tracking-wider text-blue-900">Availabilities</h2>
-                  <p className="text-xs text-slate-400">Lock and update your complete fortnightly scheduling parameters all at once.</p>
                 </div>
                 <form onSubmit={handleStackedAvailabilitySubmit} className="bg-white border border-slate-200 rounded-xl p-6 space-y-6 shadow-sm">
                   <div className="max-w-xs">
@@ -862,12 +817,11 @@ export default function LifeUnboundPortal() {
               </div>
             )}
 
-            {/* PAGE 6: TIMESHEET SUBMISSIONS WITH RE-LABELED FORTNIGHT STRINGS */}
+            {/* PAGE 6: TIMESHEETS */}
             {currentTab === 'timesheets' && (
               <div className="space-y-6">
                 <div className="border-b border-slate-200 pb-4">
                   <h2 className="text-base font-bold uppercase tracking-wider text-blue-900">Timesheet Submissions</h2>
-                  <p className="text-xs text-slate-500">File multi-day stacked shift entries at the close of your pay cycle range.</p>
                 </div>
                 <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
                   <div className="bg-white border border-slate-200 rounded-xl p-6 xl:col-span-3 space-y-4 shadow-sm h-fit">
@@ -902,7 +856,7 @@ export default function LifeUnboundPortal() {
                             </div>
                             <div className="lg:col-span-3">
                               <select required value={row.client} onChange={(e) => updateTimesheetRowValue(idx, 'client', e.target.value)} className="w-full bg-white border border-gray-200 rounded p-1.5 text-xs text-gray-700 outline-none font-bold">
-                                <option value="">-- Choose Client --</option>
+                                <option value="">-- Pick Client --</option>
                                 <option value="Nash Murray">Nash Murray</option>
                                 {participants.filter(p=>p.name !== "Nash Murray").map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
                               </select>
@@ -933,7 +887,6 @@ export default function LifeUnboundPortal() {
 
             </div>
           )}
-
         </main>
       </div>
     </div>

@@ -25,8 +25,6 @@ export default function LifeUnboundPortal() {
   const [availabilitySubmissions, setAvailabilitySubmissions] = useState<any[]>([]);
 
   const [expandedClient, setExpandedClient] = useState<string | null>(null);
-  const [calendarScope, setCalendarScope] = useState('combined'); 
-  const [selectedCalendarTargetId, setSelectedCalendarTargetId] = useState('');
   const [calendarView, setCalendarView] = useState('month'); 
   const [currentCalendarOffset, setCurrentCalendarOffset] = useState(0); 
 
@@ -352,12 +350,7 @@ export default function LifeUnboundPortal() {
       <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center space-x-4">
           <div className="w-12 h-12 relative flex items-center justify-center rounded-xl border border-slate-200 p-1 bg-white shadow-inner">
-            <img 
-              src="/logo.png" 
-              alt="LU Logo" 
-              className="max-h-full max-w-full object-contain rounded"
-              onError={(e) => { e.currentTarget.src = 'https://wgtcvmyofcoikynyftwn.supabase.co/storage/v1/object/public/assets/logo-fallback.png'; }} 
-            />
+            <img src="/logo.png" alt="LU Logo" className="max-h-full max-w-full object-contain rounded" />
           </div>
           <div>
             <span className="font-bold text-base tracking-tight block text-blue-900">LIFE UNBOUND SUPPORT</span>
@@ -573,7 +566,7 @@ export default function LifeUnboundPortal() {
                         <label className="block text-[9px] font-black uppercase text-slate-500 tracking-wider">Allocation Target Stream</label>
                         <select value={allocationType} onChange={(e)=>setAllocationType(e.target.value)} className="w-full bg-white border border-slate-200 rounded p-1 text-xs font-bold text-blue-600 outline-none">
                           <option value="available">Unassigned / Open Available</option>
-                          <option value="admin">Corporate Administration Link</option>
+                          <option value="admin">Corporate Administration Calendar Link</option>
                           <option value="staff">Staff Scheduled Timeline</option>
                           <option value="participant">Participant Dedicated Timeline</option>
                         </select>

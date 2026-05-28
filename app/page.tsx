@@ -10,25 +10,27 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publish
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function LifeUnboundPortal() {
-  const [portalType, setPortalType] = useState<null | 'staff' | 'admin'>(null);
-  const [user, setUser] = useState<any>(null);
+  const [portalType, setPortalType] = useState(null);
+  const [user, setUser] = useState(null);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [currentTab, setCurrentTab] = useState('dashboard');
   const [loading, setLoading] = useState(false);
-  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [notification, setNotification] = useState(null);
 
-  const [profiles, setProfiles] = useState<any[]>([]);
-  const [participants, setParticipants] = useState<any[]>([]);
-  const [shifts, setShifts] = useState<any[]>([]);
-  const [timesheetHistory, setTimesheetHistory] = useState<any[]>([]);
-  const [availabilitySubmissions, setAvailabilitySubmissions] = useState<any[]>([]);
+  const [profiles, setProfiles] = useState([]);
+  const [participants, setParticipants] = useState([]);
+  const [shifts, setShifts] = useState([]);
+  const [timesheetHistory, setTimesheetHistory] = useState([]);
+  const [availabilitySubmissions, setAvailabilitySubmissions] = useState([]);
 
-  const [expandedClient, setExpandedClient] = useState<string | null>(null);
+  const [expandedClient, setExpandedClient] = useState(null);
+  const [calendarScope, setCalendarScope] = useState('combined'); 
+  const [selectedCalendarTargetId, setSelectedCalendarTargetId] = useState('');
   const [calendarView, setCalendarView] = useState('month'); 
   const [currentCalendarOffset, setCurrentCalendarOffset] = useState(0); 
 
-  const [fortnights, setFortnights] = useState<any[]>([]);
+  const [fortnights, setFortnights] = useState([]);
   const [selectedFortnight, setSelectedFortnight] = useState('');
 
   const [workerName, setWorkerName] = useState('');
@@ -47,20 +49,20 @@ export default function LifeUnboundPortal() {
   const [eventCategory, setEventCategory] = useState('shift'); 
   const [shiftTitle, setShiftTitle] = useState('');
   const [allocationType, setAllocationType] = useState('available'); 
-  const [selectedWorkerIds, setSelectedWorkerIds] = useState<string[]>([]);
-  const [selectedParticipantIds, setSelectedParticipantIds] = useState<string[]>([]);
+  const [selectedWorkerIds, setSelectedWorkerIds] = useState([]);
+  const [selectedParticipantIds, setSelectedParticipantIds] = useState([]);
   const [shiftDate, setShiftDate] = useState('');
   const [shiftStart, setShiftStart] = useState('');
   const [shiftEnd, setShiftEnd] = useState('');
   const [shiftDirectives, setShiftDirectives] = useState('');
 
-  const [timesheetRows, setTimesheetRows] = useState<any[]>([
+  const [timesheetRows, setTimesheetRows] = useState([
     { date: '', start: '', end: '', client: '', kmWith: '0', kmWithout: '0', notes: '' }
   ]);
   const [tsNotesChecked, setTsNotesChecked] = useState(false);
 
   const [availFortnight, setAvailFortnight] = useState('');
-  const [availDaysState, setAvailDaysState] = useState<any>({
+  const [availDaysState, setAvailDaysState] = useState({
     Monday: { mode: 'standard', start: '09:00', end: '17:00' },
     Tuesday: { mode: 'standard', start: '09:00', end: '17:00' },
     Wednesday: { mode: 'standard', start: '09:00', end: '17:00' },
@@ -70,7 +72,7 @@ export default function LifeUnboundPortal() {
     Sunday: { mode: 'standard', start: '09:00', end: '17:00' },
   });
 
-  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+  const showToast = (message, type = 'success') => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 5000);
   };
@@ -115,7 +117,7 @@ export default function LifeUnboundPortal() {
     }
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
@@ -141,7 +143,7 @@ export default function LifeUnboundPortal() {
     }
   };
 
-  const handleRegisterWorker = async (e: React.FormEvent) => {
+  const handleRegisterWorker = async (e) => {
     e.preventDefault();
     const securePasswordTemplate = 'LU-' + Math.random().toString(36).substring(2, 8).toUpperCase() + '!';
     try {
@@ -157,12 +159,12 @@ export default function LifeUnboundPortal() {
       setWorkerPhone('');
       setWorkerNotes('');
       fetchCoreData();
-    } catch (err: any) {
+    } catch (err) {
       showToast(err.message || 'Could not insert support worker.', 'error');
     }
   };
 
-  const handleRegisterParticipant = async (e: React.FormEvent) => {
+  const handleRegisterParticipant = async (e) => {
     e.preventDefault();
     try {
       const { error } = await supabase.from('participants').insert([
@@ -177,12 +179,12 @@ export default function LifeUnboundPortal() {
       setPartEmergPhone('');
       setPartNotes('');
       fetchCoreData();
-    } catch (err: any) {
+    } catch (err) {
       showToast(err.message || 'Error executing participant addition.', 'error');
     }
   };
 
-  const handleCreateShift = async (e: React.FormEvent) => {
+  const handleCreateShift = async (e) => {
     e.preventDefault();
     try {
       const startIso = `${shiftDate}T${shiftStart}:00`;
@@ -190,7 +192,7 @@ export default function LifeUnboundPortal() {
       const titlePrefix = eventCategory === 'event' ? '[EVENT] ' : '';
       const finalTitle = titlePrefix + (shiftTitle.trim() || 'Roster Item');
 
-      let insertionRows: any[] = [];
+      let insertionRows = [];
 
       if (allocationType === 'available') {
         insertionRows.push({ title: finalTitle, staff_id: null, participant_id: null, start_time: startIso, end_time: endIso, manager_directives: shiftDirectives.trim(), status: 'available' });
@@ -219,12 +221,12 @@ export default function LifeUnboundPortal() {
       setSelectedWorkerIds([]);
       setSelectedParticipantIds([]);
       fetchCoreData();
-    } catch (err: any) {
+    } catch (err) {
       showToast(err.message || 'Database rejected layout compilation.', 'error');
     }
   };
 
-  const handleToggleWorkerCheckbox = (id: string) => {
+  const handleToggleWorkerCheckbox = (id) => {
     if (selectedWorkerIds.includes(id)) {
       setSelectedWorkerIds(selectedWorkerIds.filter(item => item !== id));
     } else {
@@ -232,7 +234,7 @@ export default function LifeUnboundPortal() {
     }
   };
 
-  const handleToggleParticipantCheckbox = (id: string) => {
+  const handleToggleParticipantCheckbox = (id) => {
     if (selectedParticipantIds.includes(id)) {
       setSelectedParticipantIds(selectedParticipantIds.filter(item => item !== id));
     } else {
@@ -240,7 +242,7 @@ export default function LifeUnboundPortal() {
     }
   };
 
-  const handleClaimUnclaimedShift = async (id: string) => {
+  const handleClaimUnclaimedShift = async (id) => {
     try {
       const { error } = await supabase.from('shifts').update({ staff_id: user.id, status: 'scheduled' }).eq('id', id);
       if (error) throw error;
@@ -255,13 +257,13 @@ export default function LifeUnboundPortal() {
     setTimesheetRows([...timesheetRows, { date: '', start: '', end: '', client: '', kmWith: '0', kmWithout: '0', notes: '' }]);
   };
 
-  const updateTimesheetRowValue = (index: number, field: string, value: string) => {
+  const updateTimesheetRowValue = (index, field, value) => {
     const updated = [...timesheetRows];
     updated[index][field] = value;
     setTimesheetRows(updated);
   };
 
-  const handleStackedTimesheetSubmit = async (e: React.FormEvent) => {
+  const handleStackedTimesheetSubmit = async (e) => {
     e.preventDefault();
     if (!tsNotesChecked) {
       showToast('Verification checkbox acknowledgment is required.', 'error');
@@ -294,7 +296,7 @@ export default function LifeUnboundPortal() {
     setTsNotesChecked(false);
   };
 
-  const updateAvailabilityMode = (day: string, mode: 'standard' | 'allday' | 'unavailable') => {
+  const updateAvailabilityMode = (day, mode) => {
     const updated = { ...availDaysState };
     updated[day].mode = mode;
     if (mode === 'allday') { updated[day].start = '00:00'; updated[day].end = '23:59'; }
@@ -302,13 +304,13 @@ export default function LifeUnboundPortal() {
     setAvailDaysState(updated);
   };
 
-  const updateAvailabilityTimes = (day: string, field: 'start' | 'end', val: string) => {
+  const updateAvailabilityTimes = (day, field, val) => {
     const updated = { ...availDaysState };
     updated[day][field] = val;
     setAvailDaysState(updated);
   };
 
-  const handleStackedAvailabilitySubmit = async (e: React.FormEvent) => {
+  const handleStackedAvailabilitySubmit = async (e) => {
     e.preventDefault();
     const uniqueLogId = 'AV-' + Date.now().toString().substring(8);
     const submissionItem = {
@@ -565,8 +567,8 @@ export default function LifeUnboundPortal() {
                       <div className="lg:col-span-2 bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1">
                         <label className="block text-[9px] font-black uppercase text-slate-500 tracking-wider">Allocation Target Stream</label>
                         <select value={allocationType} onChange={(e)=>setAllocationType(e.target.value)} className="w-full bg-white border border-slate-200 rounded p-1 text-xs font-bold text-blue-600 outline-none">
-                          <option value="available">Unassigned / Open Available</option>
-                          <option value="admin">Corporate Administration Calendar Link</option>
+                          <option value="available">Unassigned Open Available</option>
+                          <option value="admin">Corporate Administration Link</option>
                           <option value="staff">Staff Scheduled Timeline</option>
                           <option value="participant">Participant Dedicated Timeline</option>
                         </select>

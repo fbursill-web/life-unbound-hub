@@ -135,7 +135,7 @@ export default function LifeUnboundPortal() {
         showToast('No user profile found matching that email.', 'error');
       } else if (data.password_mock === loginPassword.trim()) {
         if (portalType === 'admin' && data.role !== 'director') {
-          showToast('Access denied. Administrative privileges required.', 'error');
+          showToast('Access denied. Administrator privileges required.', 'error');
           setLoading(false);
           return;
         }
@@ -398,6 +398,7 @@ export default function LifeUnboundPortal() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col antialiased font-sans selection:bg-blue-500/20">
       
+      {/* Light Clean Navigation Bar */}
       <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center space-x-4">
           <div className="w-12 h-12 relative flex items-center justify-center rounded-xl border border-slate-200 p-1 bg-white shadow-inner">
@@ -431,6 +432,7 @@ export default function LifeUnboundPortal() {
         </div>
       </header>
 
+      {/* Top Horizontal View Switch Tabs Bar Navigation */}
       {user && (
         <nav className="bg-white border-b border-slate-200 px-6 py-2 flex flex-wrap gap-1.5 shadow-sm">
           <button onClick={() => setCurrentTab('dashboard')} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${currentTab === 'dashboard' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'}`}>Dashboards</button>
@@ -445,6 +447,7 @@ export default function LifeUnboundPortal() {
         </nav>
       )}
 
+      {/* Main Workspace Frame App Canvas */}
       <main className="flex-1 p-5 sm:p-8 w-full mx-auto max-w-7xl">
         
         {notification && (
@@ -455,6 +458,7 @@ export default function LifeUnboundPortal() {
           </div>
         )}
 
+        {/* RESTORED CLEAR TEXT LOGIN LANDING GATE SELECTION MODULE */}
         {!user && !portalType && (
           <div className="max-w-md mx-auto my-16 bg-white border border-slate-200 shadow-md rounded-xl p-8 space-y-5 text-center">
             <h1 className="text-sm font-black uppercase tracking-widest text-slate-400">Portal Entry Gateway</h1>
@@ -673,7 +677,7 @@ export default function LifeUnboundPortal() {
                         <input type="text" placeholder="Manager Directives / Reminders..." value={shiftDirectives} onChange={(e) => setShiftDirectives(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg p-2 text-xs text-gray-800 outline-none" />
                       </div>
                       <div className="lg:col-span-2 flex items-end">
-                        <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase py-2.5 rounded-lg transition-transform transform active:scale-95 shadow">Deploy Event Rows</button>
+                        <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase rounded-lg py-2.5 transition-transform transform active:scale-95 shadow">Deploy Event Rows</button>
                       </div>
                     </form>
                   </div>

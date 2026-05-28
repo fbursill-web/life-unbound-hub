@@ -1,3 +1,8 @@
+/* eslint-disable react/no-unescaped-entities */
+/* eslint-disable @next/next/no-img-element */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -98,105 +103,152 @@ export default function LifeUnboundPortal() {
   };
 
   const fetchCoreData = async () => {
-    const { data: profs } = await supabase.from('profiles').select('*');
-    if (profs) setProfiles(profs);
-    const { data: parts } = await supabase.from('participants').select('*');
-    if (parts) setParticipants(parts);
-    const { data: sfts } = await supabase.from('shifts').select('*');
-    if (sfts) setShifts(sfts);
+    try {
+      const { data: profs } = await supabase.from('profiles').select('*');
+      if (profs) setProfiles(profs);
+      const { data: parts } = await supabase.from('participants').select('*');
+      if (parts) setParticipants(parts);
+      const { data: sfts } = await supabase.from('shifts').select('*');
+      if (sfts) setShifts(sfts);
+    } catch (err) {
+      console.error('Data sync error:', err);
+    }
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { data, error } = await supabase.from('profiles').select('*').eq('email', loginEmail.trim()).single();
-    if (error || !data || data.password_mock !== loginPassword.trim()) {
-      showToast('Invalid credentials.', 'error');
-    } else if (portalType === 'admin' && data.role !== 'director') {
-      showToast('Admin privileges required.', 'error');
-    } else {
-      setUser(data);
-      setCurrentTab('dashboard');
+    try {
+      const { data, error } = await supabase.from('profiles').select('*').eq('email', loginEmail.trim()).single();
+      if (error || !data) {
+        showToast('No user profile found matching that email.', 'error');
+      } else if (data.password_mock === loginPassword.trim()) {
+        if (portalType === 'admin' && data.role !== 'director') {
+          showToast('Access denied. Administrative privileges required.', 'error');
+          setLoading(false);
+          return;
+        }
+        setUser(data);
+        showToast('Authentication successful.', 'success');
+        setCurrentTab('dashboard');
+      } else {
+        showToast('Invalid access credentials.', 'error');
+      }
+    } catch (err) {
+      showToast('Connection handshake rejected.', 'error');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleRegisterWorker = async (e: React.FormEvent) => {
     e.preventDefault();
     const securePasswordTemplate = 'LU-' + Math.random().toString(36).substring(2, 8).toUpperCase() + '!';
-    const extendedNotesJson = JSON.stringify({ phone: workerPhone.trim(), notes: workerNotes.trim() });
-    await supabase.from('profiles').insert([
-      { email: workerEmail.trim(), full_name: workerName.trim(), role: 'support_worker', password_mock: securePasswordTemplate, notes: extendedNotesJson }
-    ]);
-    setGeneratedPassword(securePasswordTemplate);
-    showToast('Support worker account initialized safely.', 'success');
-    setWorkerName('');
-    setWorkerEmail('');
-    setWorkerPhone('');
-    setWorkerNotes('');
-    fetchCoreData();
+    try {
+      const extendedNotesJson = JSON.stringify({ phone: workerPhone.trim(), notes: workerNotes.trim() });
+      const { error } = await supabase.from('profiles').insert([
+        { email: workerEmail.trim(), full_name: workerName.trim(), role: 'support_worker', password_mock: securePasswordTemplate, notes: extendedNotesJson }
+      ]);
+      if (error) throw error;
+      setGeneratedPassword(securePasswordTemplate);
+      showToast('Support worker account initialized safely.', 'success');
+      setWorkerName('');
+      setWorkerEmail('');
+      setWorkerPhone('');
+      setWorkerNotes('');
+      fetchCoreData();
+    } catch (err: any) {
+      showToast(err.message || 'Could not insert support worker.', 'error');
+    }
   };
 
   const handleRegisterParticipant = async (e: React.FormEvent) => {
     e.preventDefault();
-    await supabase.from('participants').insert([
-      { name: partName.trim(), ndis_number: partNdis.trim(), primary_contact_phone: partPhone.trim(), emergency_contact_name: partEmergName.trim(), emergency_contact_phone: partEmergPhone.trim(), about_me_notes: partNotes.trim() }
-    ]);
-    showToast('Participant registered successfully.', 'success');
-    setPartName('');
-    setPartNdis('');
-    setPartPhone('');
-    setPartEmergName('');
-    setPartEmergPhone('');
-    setPartNotes('');
-    fetchCoreData();
+    try {
+      const { error } = await supabase.from('participants').insert([
+        { name: partName.trim(), ndis_number: partNdis.trim(), primary_contact_phone: partPhone.trim(), emergency_contact_name: partEmergName.trim(), emergency_contact_phone: partEmergPhone.trim(), about_me_notes: partNotes.trim() }
+      ]);
+      if (error) throw error;
+      showToast('Participant registered successfully.', 'success');
+      setPartName('');
+      setPartNdis('');
+      setPartPhone('');
+      setPartEmergName('');
+      setPartEmergPhone('');
+      setPartNotes('');
+      fetchCoreData();
+    } catch (err: any) {
+      showToast(err.message || 'Error executing participant addition.', 'error');
+    }
   };
 
   const handleCreateShift = async (e: React.FormEvent) => {
     e.preventDefault();
-    const startIso = `${shiftDate}T${shiftStart}:00`;
-    const endIso = `${shiftDate}T${shiftEnd}:00`;
-    const titlePrefix = eventCategory === 'event' ? '[EVENT] ' : '';
-    const finalTitle = titlePrefix + (shiftTitle.trim() || 'Roster Item');
+    try {
+      const startIso = `${shiftDate}T${shiftStart}:00`;
+      const endIso = `${shiftDate}T${shiftEnd}:00`;
+      const titlePrefix = eventCategory === 'event' ? '[EVENT] ' : '';
+      const finalTitle = titlePrefix + (shiftTitle.trim() || 'Roster Item');
 
-    let insertionRows: any[] = [];
-    if (allocationType === 'available') {
-      insertionRows.push({ title: finalTitle, staff_id: null, participant_id: null, start_time: startIso, end_time: endIso, manager_directives: shiftDirectives.trim(), status: 'available' });
-    } else if (allocationType === 'admin') {
-      insertionRows.push({ title: finalTitle, staff_id: null, participant_id: null, start_time: startIso, end_time: endIso, manager_directives: shiftDirectives.trim(), status: 'scheduled' });
-    } else {
-      const workersToLoop = selectedWorkerIds.length > 0 ? selectedWorkerIds : [null];
-      const clientsToLoop = selectedParticipantIds.length > 0 ? selectedParticipantIds : [null];
-      workersToLoop.forEach(wId => {
-        clientsToLoop.forEach(pId => {
-          insertionRows.push({ title: finalTitle, staff_id: wId, participant_id: pId, start_time: startIso, end_time: endIso, manager_directives: shiftDirectives.trim(), status: wId ? 'scheduled' : 'available' });
+      let insertionRows: any[] = [];
+
+      if (allocationType === 'available') {
+        insertionRows.push({ title: finalTitle, staff_id: null, participant_id: null, start_time: startIso, end_time: endIso, manager_directives: shiftDirectives.trim(), status: 'available' });
+      } else if (allocationType === 'admin') {
+        insertionRows.push({ title: finalTitle, staff_id: null, participant_id: null, start_time: startIso, end_time: endIso, manager_directives: shiftDirectives.trim(), status: 'scheduled' });
+      } else {
+        const workersToLoop = selectedWorkerIds.length > 0 ? selectedWorkerIds : [null];
+        const clientsToLoop = selectedParticipantIds.length > 0 ? selectedParticipantIds : [null];
+
+        workersToLoop.forEach(wId => {
+          clientsToLoop.forEach(pId => {
+            insertionRows.push({ title: finalTitle, staff_id: wId, participant_id: pId, start_time: startIso, end_time: endIso, manager_directives: shiftDirectives.trim(), status: wId ? 'scheduled' : 'available' });
+          });
         });
-      });
+      }
+
+      const { error } = await supabase.from('shifts').insert(insertionRows);
+      if (error) throw error;
+      
+      showToast(`Successfully published ${insertionRows.length} items.`, 'success');
+      setShiftTitle('');
+      setShiftDirectives('');
+      setShiftDate('');
+      setShiftStart('');
+      setShiftEnd('');
+      setSelectedWorkerIds([]);
+      setSelectedParticipantIds([]);
+      fetchCoreData();
+    } catch (err: any) {
+      showToast(err.message || 'Database rejected layout compilation.', 'error');
     }
-    await supabase.from('shifts').insert(insertionRows);
-    showToast(`Successfully published ${insertionRows.length} items.`, 'success');
-    setShiftTitle('');
-    setShiftDirectives('');
-    setShiftDate('');
-    setShiftStart('');
-    setShiftEnd('');
-    setSelectedWorkerIds([]);
-    setSelectedParticipantIds([]);
-    fetchCoreData();
   };
 
   const handleToggleWorkerCheckbox = (id: string) => {
-    setSelectedWorkerIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+    if (selectedWorkerIds.includes(id)) {
+      setSelectedWorkerIds(selectedWorkerIds.filter(item => item !== id));
+    } else {
+      setSelectedWorkerIds([...selectedWorkerIds, id]);
+    }
   };
 
   const handleToggleParticipantCheckbox = (id: string) => {
-    setSelectedParticipantIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+    if (selectedParticipantIds.includes(id)) {
+      setSelectedParticipantIds(selectedParticipantIds.filter(item => item !== id));
+    } else {
+      setSelectedParticipantIds([...selectedParticipantIds, id]);
+    }
   };
 
   const handleClaimUnclaimedShift = async (id: string) => {
-    await supabase.from('shifts').update({ staff_id: user.id, status: 'scheduled' }).eq('id', id);
-    showToast('Shift assigned cleanly onto your staff roster.', 'success');
-    fetchCoreData();
+    try {
+      const { error } = await supabase.from('shifts').update({ staff_id: user.id, status: 'scheduled' }).eq('id', id);
+      if (error) throw error;
+      showToast('Shift assigned cleanly onto your staff roster.', 'success');
+      fetchCoreData();
+    } catch (err) {
+      showToast('Error binding assignment.', 'error');
+    }
   };
 
   const addTimesheetRow = () => {
@@ -224,7 +276,18 @@ export default function LifeUnboundPortal() {
         computedHoursTotal += Math.max(0, eh - sh);
       }
     });
-    const masterLogBlock = { id: payloadId, workerName: user.full_name, workerEmail: user.email, fortnightId: selectedFortnight, fortnightLabel: fortnights.find(f => f.id === selectedFortnight)?.label || selectedFortnight, rowsCount: timesheetRows.length, totalHours: computedHoursTotal, submittedDate: new Date().toLocaleDateString('en-AU') };
+
+    const masterLogBlock = {
+      id: payloadId,
+      workerName: user.full_name,
+      workerEmail: user.email,
+      fortnightId: selectedFortnight,
+      fortnightLabel: fortnights.find(f => f.id === selectedFortnight)?.label || selectedFortnight,
+      rowsCount: timesheetRows.length,
+      totalHours: computedHoursTotal,
+      submittedDate: new Date().toLocaleDateString('en-AU')
+    };
+
     setTimesheetHistory([masterLogBlock, ...timesheetHistory]);
     showToast('Fortnightly timesheet packet filed securely.', 'success');
     setTimesheetRows([{ date: '', start: '', end: '', client: '', kmWith: '0', kmWithout: '0', notes: '' }]);
@@ -248,7 +311,14 @@ export default function LifeUnboundPortal() {
   const handleStackedAvailabilitySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const uniqueLogId = 'AV-' + Date.now().toString().substring(8);
-    const submissionItem = { id: uniqueLogId, workerName: user.full_name, fortnightId: availFortnight, fortnightLabel: fortnights.find(f => f.id === availFortnight)?.label || availFortnight, matrix: { ...availDaysState }, submittedAt: new Date().toLocaleDateString('en-AU') };
+    const submissionItem = {
+      id: uniqueLogId,
+      workerName: user.full_name,
+      fortnightId: availFortnight,
+      fortnightLabel: fortnights.find(f => f.id === availFortnight)?.label || availFortnight,
+      matrix: { ...availDaysState },
+      submittedAt: new Date().toLocaleDateString('en-AU')
+    };
     setAvailabilitySubmissions([submissionItem, ...availabilitySubmissions]);
     showToast('Fortnightly availabilities synchronized successfully.', 'success');
   };
@@ -268,7 +338,7 @@ export default function LifeUnboundPortal() {
       startOfWeek.setDate(baseDate.getDate() - baseDate.getDay() + (currentCalendarOffset * 7) + 1);
       const endOfWeek = new Date(startOfWeek);
       endOfWeek.setDate(startOfWeek.getDate() + 6);
-      return `${startOfWeek.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })} - ${endOfWeek.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+      return `${startOfWeek.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })} to ${endOfWeek.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}`;
     }
     baseDate.setMonth(baseDate.getMonth() + currentCalendarOffset);
     return baseDate.toLocaleDateString('en-AU', { month: 'long', year: 'numeric' });
@@ -280,12 +350,7 @@ export default function LifeUnboundPortal() {
       <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center space-x-4">
           <div className="w-12 h-12 relative flex items-center justify-center rounded-xl border border-slate-200 p-1 bg-white shadow-inner">
-            <img 
-              src="/logo.png" 
-              alt="LU Logo" 
-              className="max-h-full max-w-full object-contain rounded"
-              onError={(e)=>{ (e.target as HTMLImageElement).src = 'https://wgtcvmyofcoikynyftwn.supabase.co/storage/v1/object/public/assets/logo-fallback.png'; }}
-            />
+            <img src="/logo.png" alt="LU Logo" className="max-h-full max-w-full object-contain rounded" onError={(e)=>{ (e.target as HTMLImageElement).src = 'https://wgtcvmyofcoikynyftwn.supabase.co/storage/v1/object/public/assets/logo-fallback.png'; }} />
           </div>
           <div>
             <span className="font-bold text-base tracking-tight block text-blue-900">LIFE UNBOUND SUPPORT</span>
@@ -349,9 +414,9 @@ export default function LifeUnboundPortal() {
               </div>
               <div>
                 <label className="block text-[9px] font-bold tracking-wider text-slate-500 uppercase mb-1">Security Access Password</label>
-                <input type="password" required placeholder="••••••••••••" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} className="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-blue-500" />
+                <input type="password" required placeholder="Secure String Input" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} disabled={loading} className="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-blue-500" />
               </div>
-              <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider py-3 rounded-lg shadow transition-all transform active:scale-95">Verify Account Signature</button>
+              <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider py-3 rounded-lg shadow transition-all transform active:scale-95">Verify Account Signature</button>
             </form>
           </div>
         )}
@@ -390,7 +455,7 @@ export default function LifeUnboundPortal() {
                               {dailyShifts.slice(0,2).map(s => (
                                 <div key={s.id} className="text-[8px] font-bold p-0.5 rounded border bg-blue-50 text-blue-700 border-blue-200 truncate">{s.title}</div>
                               ))}
-                              {dailyShifts.length === 0 && <span className="text-[8px] text-slate-300 italic block pt-2">Empty</span>}
+                              {dailyShifts.length === 0 && <span className="text-[8px] text-slate-300 italic block pt-2">Empty Block</span>}
                             </div>
                           </div>
                         );
@@ -440,6 +505,18 @@ export default function LifeUnboundPortal() {
                       </div>
                       <button type="submit" className="sm:col-span-2 bg-gray-800 hover:bg-gray-900 text-white font-bold text-xs uppercase py-2.5 rounded shadow transition-colors">Register Card Entry</button>
                     </form>
+                  </div>
+
+                  <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm xl:col-span-2 space-y-2">
+                    <h3 className="text-xs font-bold text-blue-900 uppercase tracking-wide">Staff Availability Audit Board</h3>
+                    <div className="border border-slate-200 rounded-xl bg-slate-50 divide-y divide-slate-200 max-h-40 overflow-y-auto">
+                      {availabilitySubmissions.map((sub, sIdx) => (
+                        <div key={sIdx} className="p-3 bg-white text-xs flex justify-between items-center">
+                          <span className="font-bold text-slate-800">{sub.workerName} availability parameters compiled</span>
+                          <span className="font-mono text-slate-400 text-[10px] font-bold">{sub.fortnightLabel}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -533,9 +610,9 @@ export default function LifeUnboundPortal() {
 
                 <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
                   <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex items-center justify-between shadow-sm select-none">
-                    <button onClick={() => setCurrentCalendarOffset(currentCalendarOffset - 1)} className="bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs uppercase">← Previous</button>
+                    <button onClick={() => setCurrentCalendarOffset(currentCalendarOffset - 1)} className="bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs uppercase">Previous</button>
                     <span className="text-xs font-black uppercase text-blue-900 tracking-widest font-mono bg-white border border-slate-200 px-4 py-1.5 rounded-xl shadow-inner">{getDynamicCalendarHeaderString()}</span>
-                    <button onClick={() => setCurrentCalendarOffset(currentCalendarOffset + 1)} className="bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs uppercase">Next →</button>
+                    <button onClick={() => setCurrentCalendarOffset(currentCalendarOffset + 1)} className="bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs uppercase">Next</button>
                   </div>
 
                   {calendarView === 'month' && (
@@ -591,7 +668,10 @@ export default function LifeUnboundPortal() {
                             <span className="w-16 block font-bold text-blue-600 select-none text-right font-mono">{hourStamp}</span>
                             <div className="flex-1 space-y-1">
                               {hourShifts.map(s => (
-                                <div key={s.id} className="p-3 rounded-xl border bg-blue-50/50 border-blue-200 text-blue-900 font-bold">{s.title}</div>
+                                <div key={s.id} className="p-3 rounded-xl border bg-blue-50/50 border-blue-200 text-blue-900 font-bold">
+                                  {s.title} 
+                                  {s.manager_directives && <span className="block text-[10px] text-slate-500 font-normal mt-0.5">Note: {s.manager_directives}</span>}
+                                </div>
                               ))}
                             </div>
                           </div>

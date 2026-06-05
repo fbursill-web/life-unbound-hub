@@ -99,7 +99,7 @@ const Sel = (props) => (
   />
 );
 
-const Btn = ({ variant, size, className, ...p }) => {
+const Btn = ({ variant, size, className = '', ...p }) => {
   const v = variant || 'primary';
   const s = size    || 'md';
   const base = 'font-bold uppercase tracking-wider rounded-lg transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5 ';

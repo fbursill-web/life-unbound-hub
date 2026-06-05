@@ -520,7 +520,7 @@ return (
         <div className="px-5 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-md overflow-hidden">
-              <img src="/logo.png" alt="LU" className="w-full h-full object-contain" onError={e => { e.target.style.display = 'none'; }} />
+              <img src="/logo.png" alt="LU" className="w-full h-full object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
             </div>
             <div>
               <div className="font-black text-sm text-blue-900 tracking-tight leading-none">LIFE UNBOUND SUPPORT</div>
@@ -578,7 +578,7 @@ return (
             <div className="bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden">
               <div className="bg-gradient-to-br from-blue-700 to-blue-900 px-8 py-10 text-center">
                 <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 overflow-hidden">
-                  <img src="/logo.png" alt="LU" className="w-full h-full object-contain" onError={e => { e.target.style.display = 'none'; }} />
+                  <img src="/logo.png" alt="LU" className="w-full h-full object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                 </div>
                 <h1 className="text-xl font-black text-white tracking-tight">Life Unbound Support</h1>
                 <p className="text-blue-200 text-xs font-medium mt-1">Internal Operations Portal</p>

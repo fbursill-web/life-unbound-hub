@@ -440,11 +440,11 @@ export default function LifeUnboundPortal() {
   const setExtField = (id, f, v) =>
     setPartDetails(prev => ({ ...prev, [id]: { ...(prev[id] || {}), [f]: v } }));
 
-  const handleFileUpload = (id, e) => {
-    const files    = Array.from(e.target.files);
+const handleFileUpload = (id, e) => {
+    const files    = Array.from(e.target.files) as File[];
     const existing = getExt(id).files || [];
     Promise.all(
-      files.map(f => new Promise(res => {
+      files.map((f: File) => new Promise(res => {
         const reader = new FileReader();
         reader.onload = () => res({ name: f.name, type: f.type, size: f.size, data: reader.result });
         reader.readAsDataURL(f);

@@ -205,7 +205,7 @@ export default function LifeUnboundPortal() {
   const [expandedPartId, setExpandedPartId] = useState(null);
 
   // ─── Toast notification ───────────────────────────────────────────────────
-  const toast = (msg, type) => {
+  const toast = (msg, type = 'success') => {
     setNotification({ msg, type: type || 'success' });
     setTimeout(() => setNotification(null), 4500);
   };

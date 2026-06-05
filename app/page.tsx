@@ -38,7 +38,7 @@ const ShiftsChart = ({ shifts }) => {
 };
 
 // ─── Modal overlay ────────────────────────────────────────────────────────────
-const Modal = ({ onClose, title, wide, children }) => (
+const Modal = ({ onClose, title, wide = false, children }) => (
   <div
     className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
     onClick={onClose}

@@ -257,7 +257,7 @@ export default function LifeUnboundPortal() {
       if (portalType === 'admin' && data.role !== 'director') { toast('Admin access requires director role.', 'error'); return; }
       setUser(data);
       setCurrentTab('dashboard');
-      toast('Welcome back, ' + data.full_name.split(' ')[0] + '.');
+      toast('Welcome back, ' + data.(data.full_name || 'there').split(' ')[0] + '.');
     } catch { toast('Connection error. Please try again.', 'error'); }
     finally  { setLoading(false); }
   };

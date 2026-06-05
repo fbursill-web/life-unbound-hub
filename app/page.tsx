@@ -630,7 +630,7 @@ return (
               <div className="space-y-6">
                 <div>
                   <h2 className="text-lg font-black text-blue-900">Dashboard</h2>
-                  <p className="text-xs text-slate-400">{'Welcome back, ' + user.full_name.split(' ')[0] + '. Here is your overview.'}</p>
+                  <p className="text-xs text-slate-400">{'Welcome back, ' + (user.full_name || 'there').split(' ')[0] + '. Here is your overview.'}</p>
                 </div>
 
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
